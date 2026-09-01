@@ -1,0 +1,317 @@
+/* ============================================================
+   Digital Lost & Found Network — "Civic Ledger" design system
+   A structured, form-forward system for a police/citizen service.
+   Display: Space Grotesk · Body: Source Serif 4 · Data: IBM Plex Mono
+   ============================================================ */
+
+:root {
+  --paper: #eef1f0;
+  --paper-raised: #ffffff;
+  --ink: #12222b;
+  --muted: #56635f;
+  --muted-soft: #8a948f;
+  --brand: #1c5d5a;
+  --brand-dark: #123f3d;
+  --brand-tint: #e3ece9;
+  --brass: #b08d57;
+  --brass-tint: #f3ead9;
+  --caution: #c97a1a;
+  --caution-tint: #fbe9d3;
+  --danger: #a63a34;
+  --danger-tint: #f6dfdd;
+  --line: #d8ddd9;
+  --line-strong: #b7c0bb;
+  --radius-sm: 6px;
+  --radius: 10px;
+  --radius-lg: 16px;
+  --font-display: "Space Grotesk", "Segoe UI", sans-serif;
+  --font-body: "Source Serif 4", Georgia, serif;
+  --font-mono: "IBM Plex Mono", "Courier New", monospace;
+  --shadow-card: 0 1px 2px rgba(18, 34, 43, 0.06), 0 4px 16px rgba(18, 34, 43, 0.05);
+
+  /* Bootstrap overrides */
+  --bs-body-bg: var(--paper);
+  --bs-body-color: var(--ink);
+  --bs-body-font-family: var(--font-body);
+  --bs-primary: #1c5d5a;
+  --bs-primary-rgb: 28, 93, 90;
+  --bs-link-color: var(--brand);
+  --bs-link-hover-color: var(--brand-dark);
+  --bs-border-color: var(--line);
+  --bs-border-radius: var(--radius);
+  --bs-border-radius-lg: var(--radius-lg);
+  --bs-border-radius-sm: var(--radius-sm);
+}
+
+body {
+  background-color: var(--paper);
+  background-image:
+    linear-gradient(var(--line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--line) 1px, transparent 1px);
+  background-size: 100% 100%, 100% 100%;
+  color: var(--ink);
+  min-height: 100vh;
+}
+
+h1, h2, h3, h4, h5, h6, .font-display {
+  font-family: var(--font-display);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+}
+
+.font-mono, code, .case-number, .data-value {
+  font-family: var(--font-mono);
+}
+
+a { color: var(--brand); }
+a:hover { color: var(--brand-dark); }
+
+/* ---------- App shell ---------- */
+.app-shell {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.topbar {
+  background: var(--paper-raised);
+  border-bottom: 1px solid var(--line);
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+}
+
+.brand-mark {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.15rem;
+  color: var(--ink);
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  text-decoration: none;
+}
+.brand-mark:hover { color: var(--ink); }
+
+.brand-mark .brand-crest {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  background: var(--brand);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.app-body {
+  flex: 1;
+  display: flex;
+  width: 100%;
+}
+
+.side-rail {
+  width: 232px;
+  flex-shrink: 0;
+  background: var(--paper-raised);
+  border-right: 1px solid var(--line);
+  padding: 1.25rem 0.85rem;
+}
+
+.side-rail .nav-link {
+  color: var(--muted);
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 0.92rem;
+  border-radius: var(--radius-sm);
+  padding: 0.55rem 0.75rem;
+  margin-bottom: 0.15rem;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+.side-rail .nav-link.active {
+  background: var(--brand-tint);
+  color: var(--brand-dark);
+}
+.side-rail .nav-link:hover:not(.active) {
+  background: var(--paper);
+  color: var(--ink);
+}
+
+.main-content {
+  flex: 1;
+  min-width: 0;
+  padding: 1.75rem 1.75rem 3rem;
+}
+
+.page-eyebrow {
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 0.72rem;
+  color: var(--brass);
+  font-weight: 600;
+}
+
+/* ---------- Cards ---------- */
+.card {
+  background: var(--paper-raised);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-card);
+}
+
+.card-flat {
+  background: var(--paper-raised);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+
+/* ---------- Buttons ---------- */
+.btn {
+  font-family: var(--font-display);
+  font-weight: 500;
+  border-radius: var(--radius-sm);
+}
+.btn-primary {
+  background: var(--brand);
+  border-color: var(--brand);
+}
+.btn-primary:hover, .btn-primary:focus {
+  background: var(--brand-dark);
+  border-color: var(--brand-dark);
+}
+.btn-outline-primary {
+  color: var(--brand);
+  border-color: var(--brand);
+}
+.btn-outline-primary:hover {
+  background: var(--brand);
+  border-color: var(--brand);
+}
+.btn:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible {
+  outline: 2px solid var(--brass);
+  outline-offset: 2px;
+}
+
+/* ---------- Signature element: the Case Stamp ---------- */
+.stamp {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 0.28rem 0.65rem;
+  border-radius: 999px;
+  border: 1.5px solid currentColor;
+  white-space: nowrap;
+}
+.stamp::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  flex-shrink: 0;
+}
+.stamp-neutral { color: var(--muted); background: rgba(86, 99, 95, 0.08); }
+.stamp-progress { color: var(--brass); background: var(--brass-tint); }
+.stamp-caution { color: var(--caution); background: var(--caution-tint); }
+.stamp-success { color: var(--brand); background: var(--brand-tint); }
+.stamp-danger { color: var(--danger); background: var(--danger-tint); }
+
+/* ---------- Case timeline (ledger progression) ---------- */
+.ledger-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+.ledger-step {
+  display: flex;
+  gap: 0.9rem;
+  position: relative;
+  padding-bottom: 1.5rem;
+}
+.ledger-step:last-child { padding-bottom: 0; }
+.ledger-step .ledger-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid var(--line-strong);
+  background: var(--paper-raised);
+  flex-shrink: 0;
+  margin-top: 3px;
+  z-index: 1;
+}
+.ledger-step.is-done .ledger-dot {
+  background: var(--brand);
+  border-color: var(--brand);
+}
+.ledger-step:not(:last-child)::before {
+  content: "";
+  position: absolute;
+  left: 6px;
+  top: 18px;
+  bottom: -2px;
+  width: 2px;
+  background: var(--line);
+}
+.ledger-step.is-done:not(:last-child)::before {
+  background: var(--brand);
+}
+.ledger-step .ledger-label {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+.ledger-step .ledger-meta {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--muted-soft);
+}
+
+/* ---------- Forms ---------- */
+.form-label {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 0.86rem;
+  color: var(--ink);
+}
+.form-control, .form-select {
+  border-color: var(--line-strong);
+  border-radius: var(--radius-sm);
+}
+.form-control:focus, .form-select:focus {
+  border-color: var(--brand);
+  box-shadow: 0 0 0 0.2rem rgba(28, 93, 90, 0.15);
+}
+
+/* ---------- Empty state ---------- */
+.empty-state {
+  border: 1.5px dashed var(--line-strong);
+  border-radius: var(--radius-lg);
+  padding: 2.5rem 1.5rem;
+  text-align: center;
+  color: var(--muted);
+}
+
+/* ---------- Utility ---------- */
+.text-muted-soft { color: var(--muted-soft); }
+.text-brand { color: var(--brand); }
+.text-brass { color: var(--brass); }
+.bg-paper-raised { background: var(--paper-raised); }
+.hairline-top { border-top: 1px solid var(--line); }
+.hairline-bottom { border-bottom: 1px solid var(--line); }
+
+@media (max-width: 900px) {
+  .side-rail { display: none; }
+  .main-content { padding: 1.1rem 1rem 2.5rem; }
+}

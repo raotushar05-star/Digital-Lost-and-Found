@@ -1,0 +1,15 @@
+com\lostandfound\entity\PoliceStation$PoliceStationBuilder.class
+com\lostandfound\repository\UserRepository.class
+com\lostandfound\entity\enums\Role.class
+com\lostandfound\entity\Location$LocationBuilder.class
+com\lostandfound\entity\User.class
+com\lostandfound\entity\User$UserBuilder.class
+com\lostandfound\LostAndFoundApplication.class
+com\lostandfound\entity\Location.class
+com\lostandfound\config\DataSeeder.class
+com\lostandfound\repository\PoliceStationRepository.class
+com\lostandfound\security\JwtAuthenticationFilter.class
+com\lostandfound\security\JwtAuthenticationEntryPoint.class
+com\lostandfound\security\CustomUserDetailsService.class
+com\lostandfound\config\SecurityConfig.class
+com\lostandfound\entity\PoliceStation.class
