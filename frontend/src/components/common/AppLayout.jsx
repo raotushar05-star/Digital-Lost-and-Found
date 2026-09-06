@@ -62,9 +62,9 @@ export default function AppLayout({ children }) {
       <header className="topbar">
         <div className="container-fluid d-flex align-items-center justify-content-between py-2 px-3">
           <Link to={isAuthenticated ? (isPolice ? "/police/dashboard" : "/dashboard") : "/"} className="brand-mark">
-            <span className="brand-crest">LF</span>
+            <span className="brand-crest">FL</span>
             <span>
-              Lost &amp; Found Network
+              FindLine
               {isPolice && <span className="text-muted-soft fw-normal"> · Police Portal</span>}
             </span>
           </Link>

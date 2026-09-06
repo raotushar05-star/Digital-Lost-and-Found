@@ -34,7 +34,7 @@ export default function RegisterPage() {
       <div className="card p-4" style={{ width: 420 }}>
         <div className="page-eyebrow mb-1">Create account</div>
         <h1 style={{ fontSize: "1.5rem" }} className="mb-3">
-          Join the Lost &amp; Found Network
+          Join FindLine
         </h1>
         {done ? (
           <div className="alert alert-success">Account created. Redirecting to sign in…</div>

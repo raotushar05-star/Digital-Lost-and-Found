@@ -10,8 +10,8 @@ export default function LandingPage() {
       <header className="topbar">
         <div className="container-fluid d-flex align-items-center justify-content-between py-2 px-3">
           <span className="brand-mark">
-            <span className="brand-crest">LF</span>
-            <span>Lost &amp; Found Network</span>
+            <span className="brand-crest">FL</span>
+            <span>FindLine</span>
           </span>
           <div className="d-flex gap-2">
             {isAuthenticated ? (
