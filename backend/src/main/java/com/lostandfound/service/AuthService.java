@@ -4,6 +4,7 @@ import com.lostandfound.dto.auth.*;
 import com.lostandfound.entity.User;
 import com.lostandfound.entity.enums.Role;
 import com.lostandfound.exception.ConflictException;
+import com.lostandfound.exception.ResourceNotFoundException;
 import com.lostandfound.mapper.UserMapper;
 import com.lostandfound.repository.UserRepository;
 import com.lostandfound.security.JwtTokenProvider;
@@ -60,7 +61,7 @@ public class AuthService {
             throw new BadCredentialsException("Email or phone is required");
         }
         User user = userRepository.findByEmailOrPhone(identifier, identifier)
-                .orElseThrow(() -> new BadCredentialsException("Invalid credentials"));
+                .orElseThrow(() -> new ResourceNotFoundException("This account does not exist"));
         if (!Boolean.TRUE.equals(user.getIsActive())) {
             throw new BadCredentialsException("This account has been deactivated");
         }
