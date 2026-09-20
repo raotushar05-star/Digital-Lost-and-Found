@@ -15,6 +15,8 @@ export default function ReportFoundItemPage() {
   const [categories, setCategories] = useState([]);
   const [form, setForm] = useState({ categoryId: "", description: "", brand: "", color: "", foundDate: today });
   const [location, setLocation] = useState({ city: "" });
+  const [photoFile, setPhotoFile] = useState(null);
+  const [photoPreview, setPhotoPreview] = useState(null);
   const [error, setError] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(null);
@@ -23,7 +25,19 @@ export default function ReportFoundItemPage() {
     categoryService.getCategories().then(setCategories).catch(() => {});
   }, []);
 
+  useEffect(() => {
+    return () => {
+      if (photoPreview) URL.revokeObjectURL(photoPreview);
+    };
+  }, [photoPreview]);
+
   const update = (field) => (e) => setForm({ ...form, [field]: e.target.value });
+
+  const handlePhotoSelect = (e) => {
+    const file = e.target.files?.[0] || null;
+    setPhotoFile(file);
+    setPhotoPreview(file ? URL.createObjectURL(file) : null);
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -32,9 +46,13 @@ export default function ReportFoundItemPage() {
       setError("Please enter the city and pick the approximate location on the map.");
       return;
     }
+    if (!photoFile) {
+      setError("A photo of the found item is required — it helps prove what you found and protects you if ownership is ever questioned.");
+      return;
+    }
     setSubmitting(true);
     try {
-      const res = await foundReportService.create({ ...form, location });
+      const res = await foundReportService.create({ ...form, location }, photoFile);
       setDone(res);
     } catch (err) {
       setError(extractErrorMessage(err));
@@ -49,8 +67,8 @@ export default function ReportFoundItemPage() {
         <PageHeader eyebrow="Citizen · Found item" title="Report received" />
         <div className="card p-4" style={{ maxWidth: 640 }}>
           <p>
-            Thank you — your report has been submitted. This is a preliminary record; please take the item to
-            your nearest police station so an officer can take it into official custody and verify it.
+            Thank you — your report and photo have been submitted. This is a preliminary record; please take the
+            item to your nearest police station so an officer can take it into official custody and verify it.
           </p>
           <p className="text-muted-soft" style={{ fontSize: "0.85rem" }}>
             Reference: <span className="font-mono">{done.foundReportId}</span>
@@ -104,6 +122,29 @@ export default function ReportFoundItemPage() {
         <div className="mb-3">
           <label className="form-label">Date found</label>
           <input type="date" className="form-control" required max={today} value={form.foundDate} onChange={update("foundDate")} />
+        </div>
+
+        <div className="mb-3">
+          <label className="form-label">Photo of the item (required)</label>
+          <p className="text-muted-soft mb-2" style={{ fontSize: "0.8rem" }}>
+            A timestamped photo, along with the location below, is your proof of discovery — it protects you if
+            ownership is ever disputed, and helps police match the item faster.
+          </p>
+          {photoPreview && (
+            <img
+              src={photoPreview}
+              alt="Selected preview"
+              className="mb-2"
+              style={{ width: 140, height: 140, objectFit: "cover", borderRadius: "var(--radius-sm)", border: "2px solid var(--brass)" }}
+            />
+          )}
+          <input
+            type="file"
+            accept="image/png,image/jpeg,image/webp"
+            className="form-control"
+            required
+            onChange={handlePhotoSelect}
+          />
         </div>
 
         <div className="mb-3">

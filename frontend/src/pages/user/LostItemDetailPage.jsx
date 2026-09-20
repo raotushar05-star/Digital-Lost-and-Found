@@ -16,16 +16,19 @@ export default function LostItemDetailPage() {
   const [item, setItem] = useState(null);
   const [matches, setMatches] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState(null);
 
   const load = () => {
     setLoading(true);
+    setLoadError(null);
     Promise.all([lostItemService.getById(id), matchService.getMatchesForLostItem(id)])
       .then(([itemData, matchData]) => {
         setItem(itemData);
         setMatches(matchData);
       })
+      .catch((err) => setLoadError(extractErrorMessage(err)))
       .finally(() => setLoading(false));
   };
 
@@ -53,7 +56,21 @@ export default function LostItemDetailPage() {
     }
   };
 
-  if (loading || !item) return <AppLayout><LoadingSpinner /></AppLayout>;
+  if (loading) return <AppLayout><LoadingSpinner /></AppLayout>;
+
+  if (loadError) {
+    return (
+      <AppLayout>
+        <div className="empty-state">
+          <h5 className="font-display mb-2">Couldn't load this report</h5>
+          <p className="mb-3">{loadError}</p>
+          <button className="btn btn-sm btn-outline-primary" onClick={load}>Try again</button>
+        </div>
+      </AppLayout>
+    );
+  }
+
+  if (!item) return <AppLayout><LoadingSpinner /></AppLayout>;
 
   const canEdit = item.status === "REPORTED" || item.status === "POTENTIAL_MATCH";
 

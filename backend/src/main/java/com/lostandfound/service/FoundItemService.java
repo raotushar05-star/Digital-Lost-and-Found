@@ -80,6 +80,18 @@ public class FoundItemService {
         if (linkedReport != null) {
             linkedReport.setStatus(FoundReportStatus.LINKED);
             foundReportRepository.save(linkedReport);
+
+            List<ItemPhoto> reportPhotos = itemPhotoRepository.findByFoundReport_FoundReportId(linkedReport.getFoundReportId());
+            for (ItemPhoto reportPhoto : reportPhotos) {
+                ItemPhoto carriedOver = ItemPhoto.builder()
+                        .foundItem(foundItem)
+                        .fileUrl(reportPhoto.getFileUrl())
+                        .isPrimary(reportPhoto.getIsPrimary())
+                        .visibility(reportPhoto.getVisibility())
+                        .uploadedBy(reportPhoto.getUploadedBy())
+                        .build();
+                itemPhotoRepository.save(carriedOver);
+            }
         }
 
         Case createdCase = caseService.createForFoundItem(foundItem, officer);

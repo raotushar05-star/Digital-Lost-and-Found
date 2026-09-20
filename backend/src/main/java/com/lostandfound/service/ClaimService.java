@@ -10,6 +10,7 @@ import com.lostandfound.entity.enums.ClaimStatus;
 import com.lostandfound.entity.enums.FoundItemVerificationStatus;
 import com.lostandfound.entity.enums.LostItemStatus;
 import com.lostandfound.exception.BadRequestException;
+import com.lostandfound.exception.ConflictException;
 import com.lostandfound.exception.ForbiddenException;
 import com.lostandfound.exception.ResourceNotFoundException;
 import com.lostandfound.mapper.ClaimMapper;
@@ -46,6 +47,14 @@ public class ClaimService {
                 .orElseThrow(() -> new ResourceNotFoundException("Found item not found: " + foundItemId));
         if (foundItem.getVerificationStatus() != FoundItemVerificationStatus.VERIFIED) {
             throw new BadRequestException("This item has not yet been verified by police and cannot be claimed");
+        }
+        boolean hasActiveClaim = claimRepository.findByFoundItem_FoundItemIdOrderByCreatedAtDesc(foundItemId).stream()
+                .anyMatch(c -> c.getClaimant().getUserId().equals(claimant.getUserId())
+                        && (c.getStatus() == ClaimStatus.PENDING
+                            || c.getStatus() == ClaimStatus.UNDER_VERIFICATION
+                            || c.getStatus() == ClaimStatus.DISPUTED));
+        if (hasActiveClaim) {
+            throw new ConflictException("You already have an active claim on this item. Wait for it to be resolved before submitting another.");
         }
 
         LostItem lostItem = null;

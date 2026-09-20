@@ -41,10 +41,12 @@ public class HandoverService {
         if (handoverRecordRepository.findByClaim_ClaimId(claimId).isPresent()) {
             throw new ConflictException("A handover has already been recorded for this claim");
         }
+        FoundItem foundItem = claim.getFoundItem();
+        if (handoverRecordRepository.findByFoundItem_FoundItemId(foundItem.getFoundItemId()).isPresent()) {
+            throw new ConflictException("This item has already been handed over to another claimant");
+        }
         User recipient = userRepository.findById(request.getRecipientId())
                 .orElseThrow(() -> new ResourceNotFoundException("Recipient user not found: " + request.getRecipientId()));
-
-        FoundItem foundItem = claim.getFoundItem();
 
         HandoverRecord record = HandoverRecord.builder()
                 .foundItem(foundItem)

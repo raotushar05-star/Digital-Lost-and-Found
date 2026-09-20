@@ -25,6 +25,10 @@ public class ItemPhoto {
     @JoinColumn(name = "found_item_id")
     private FoundItem foundItem;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "found_report_id")
+    private FoundReport foundReport;
+
     @Column(name = "file_url", nullable = false, length = 500)
     private String fileUrl;
 

@@ -83,7 +83,7 @@ public class UserService {
 
     public List<FoundReportDto> getMyFoundReports(UUID userId) {
         return foundReportRepository.findByFinder_UserIdOrderByCreatedAtDesc(userId).stream()
-                .map(report -> foundReportMapper.toDto(report, null))
+                .map(report -> foundReportMapper.toDto(report, null, java.util.List.of()))
                 .collect(Collectors.toList());
     }
 

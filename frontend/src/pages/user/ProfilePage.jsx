@@ -11,13 +11,21 @@ export default function ProfilePage() {
   const { refreshProfile } = useAuth();
   const [form, setForm] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
   const [saved, setSaved] = useState(false);
 
-  useEffect(() => {
-    userService.getProfile().then(setForm).finally(() => setLoading(false));
-  }, []);
+  const load = () => {
+    setLoading(true);
+    setLoadError(null);
+    userService.getProfile()
+      .then(setForm)
+      .catch((err) => setLoadError(extractErrorMessage(err)))
+      .finally(() => setLoading(false));
+  };
+
+  useEffect(load, []);
 
   const update = (field) => (e) => setForm({ ...form, [field]: e.target.value });
 
@@ -43,7 +51,21 @@ export default function ProfilePage() {
     }
   };
 
-  if (loading || !form) return <AppLayout><LoadingSpinner /></AppLayout>;
+  if (loading) return <AppLayout><LoadingSpinner /></AppLayout>;
+
+  if (loadError) {
+    return (
+      <AppLayout>
+        <div className="empty-state">
+          <h5 className="font-display mb-2">Couldn't load your profile</h5>
+          <p className="mb-3">{loadError}</p>
+          <button className="btn btn-sm btn-outline-primary" onClick={load}>Try again</button>
+        </div>
+      </AppLayout>
+    );
+  }
+
+  if (!form) return <AppLayout><LoadingSpinner /></AppLayout>;
 
   return (
     <AppLayout>

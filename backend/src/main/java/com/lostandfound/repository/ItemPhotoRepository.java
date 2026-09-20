@@ -9,4 +9,5 @@ import java.util.UUID;
 public interface ItemPhotoRepository extends JpaRepository<ItemPhoto, UUID> {
     List<ItemPhoto> findByLostItem_LostItemId(UUID lostItemId);
     List<ItemPhoto> findByFoundItem_FoundItemId(UUID foundItemId);
+    List<ItemPhoto> findByFoundReport_FoundReportId(UUID foundReportId);
 }

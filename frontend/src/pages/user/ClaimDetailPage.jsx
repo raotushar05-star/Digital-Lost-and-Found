@@ -15,12 +15,17 @@ export default function ClaimDetailPage() {
   const [claim, setClaim] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [loadError, setLoadError] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [form, setForm] = useState({ evidenceType: "RECEIPT", description: "", file: null });
 
   const load = () => {
     setLoading(true);
-    claimService.getById(id).then(setClaim).finally(() => setLoading(false));
+    setLoadError(null);
+    claimService.getById(id)
+      .then(setClaim)
+      .catch((err) => setLoadError(extractErrorMessage(err)))
+      .finally(() => setLoading(false));
   };
 
   useEffect(load, [id]);
@@ -40,7 +45,21 @@ export default function ClaimDetailPage() {
     }
   };
 
-  if (loading || !claim) return <AppLayout><LoadingSpinner /></AppLayout>;
+  if (loading) return <AppLayout><LoadingSpinner /></AppLayout>;
+
+  if (loadError) {
+    return (
+      <AppLayout>
+        <div className="empty-state">
+          <h5 className="font-display mb-2">Couldn't load this claim</h5>
+          <p className="mb-3">{loadError}</p>
+          <button className="btn btn-sm btn-outline-primary" onClick={load}>Try again</button>
+        </div>
+      </AppLayout>
+    );
+  }
+
+  if (!claim) return <AppLayout><LoadingSpinner /></AppLayout>;
 
   const finalized = claim.status === "APPROVED" || claim.status === "REJECTED";
 

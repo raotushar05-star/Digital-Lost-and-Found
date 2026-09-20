@@ -4,6 +4,7 @@ import AppLayout from "../../components/common/AppLayout.jsx";
 import LoadingSpinner from "../../components/common/LoadingSpinner.jsx";
 import StatusStamp from "../../components/common/StatusStamp.jsx";
 import { caseService } from "../../services/caseService";
+import { extractErrorMessage } from "../../services/apiClient";
 import { formatDateTime } from "../../utils/format";
 import { getStatusMeta } from "../../utils/statusConfig";
 
@@ -12,17 +13,37 @@ export default function CaseTrackingPage() {
   const [caseData, setCaseData] = useState(null);
   const [history, setHistory] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(null);
 
-  useEffect(() => {
+  const load = () => {
+    setLoading(true);
+    setLoadError(null);
     Promise.all([caseService.getById(id), caseService.getHistory(id)])
       .then(([c, h]) => {
         setCaseData(c);
         setHistory(h);
       })
+      .catch((err) => setLoadError(extractErrorMessage(err)))
       .finally(() => setLoading(false));
-  }, [id]);
+  };
 
-  if (loading || !caseData) return <AppLayout><LoadingSpinner /></AppLayout>;
+  useEffect(load, [id]);
+
+  if (loading) return <AppLayout><LoadingSpinner /></AppLayout>;
+
+  if (loadError) {
+    return (
+      <AppLayout>
+        <div className="empty-state">
+          <h5 className="font-display mb-2">Couldn't load this case</h5>
+          <p className="mb-3">{loadError}</p>
+          <button className="btn btn-sm btn-outline-primary" onClick={load}>Try again</button>
+        </div>
+      </AppLayout>
+    );
+  }
+
+  if (!caseData) return <AppLayout><LoadingSpinner /></AppLayout>;
 
   return (
     <AppLayout>

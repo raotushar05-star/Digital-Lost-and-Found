@@ -21,6 +21,7 @@ export default function FoundItemIntakePage() {
 
   const [categories, setCategories] = useState([]);
   const [stations, setStations] = useState([]);
+  const [linkedReport, setLinkedReport] = useState(null);
   const [form, setForm] = useState({
     stationId: "",
     categoryId: "",
@@ -45,20 +46,27 @@ export default function FoundItemIntakePage() {
     }
   }, [profile]);
 
+  // Fetch the citizen's found_report exactly once when a foundReportId is present.
   useEffect(() => {
     if (!foundReportId) return;
-    foundReportService.getById(foundReportId).then((report) => {
-      setForm((f) => ({
-        ...f,
-        categoryId: report.category ? f.categoryId : f.categoryId,
-        description: report.description || f.description,
-        brand: report.brand || f.brand,
-        color: report.color || f.color,
-        foundDate: report.foundDate || f.foundDate
-      }));
-      if (report.location) setLocation(report.location);
-    });
+    foundReportService.getById(foundReportId).then(setLinkedReport);
   }, [foundReportId]);
+
+  // Pre-fill the intake form once both the report and the category list are loaded,
+  // so the category name from the report can be matched to a categoryId.
+  useEffect(() => {
+    if (!linkedReport) return;
+    const matchedCategory = categories.find((c) => c.categoryName === linkedReport.category);
+    setForm((f) => ({
+      ...f,
+      categoryId: matchedCategory ? matchedCategory.categoryId : f.categoryId,
+      description: linkedReport.description || f.description,
+      brand: linkedReport.brand || f.brand,
+      color: linkedReport.color || f.color,
+      foundDate: linkedReport.foundDate || f.foundDate
+    }));
+    if (linkedReport.location) setLocation(linkedReport.location);
+  }, [linkedReport, categories]);
 
   const update = (field) => (e) => setForm({ ...form, [field]: e.target.value });
 
@@ -91,6 +99,26 @@ export default function FoundItemIntakePage() {
         title="Register a found item"
         subtitle="Only an authorized officer may create the official custody record."
       />
+
+      {linkedReport && linkedReport.photos && linkedReport.photos.length > 0 && (
+        <div className="card p-3 mb-3" style={{ maxWidth: 760 }}>
+          <div className="page-eyebrow mb-2">Citizen's proof-of-discovery photo</div>
+          <p className="text-muted-soft mb-2" style={{ fontSize: "0.82rem" }}>
+            Submitted by the finder at report time. Compare against the physical item before registering it.
+          </p>
+          <div className="d-flex gap-2 flex-wrap">
+            {linkedReport.photos.map((p) => (
+              <img
+                key={p.photoId}
+                src={p.fileUrl}
+                alt="Found report submission"
+                style={{ width: 140, height: 140, objectFit: "cover", borderRadius: "var(--radius-sm)", border: "1px solid var(--line)" }}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
       <form onSubmit={handleSubmit} className="card p-4" style={{ maxWidth: 760 }}>
         <ErrorAlert message={error} />
 
