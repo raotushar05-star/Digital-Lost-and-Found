@@ -73,6 +73,7 @@ public class LostItemService {
                 .build();
     }
 
+    @Transactional(readOnly = true)
     public LostItemDetailDto getDetail(UUID lostItemId, UserPrincipal principal) {
         LostItem item = getEntityById(lostItemId);
         assertCanView(item, principal);
@@ -139,6 +140,7 @@ public class LostItemService {
                 .build();
     }
 
+    @Transactional(readOnly = true)
     public List<LostItemSummaryDto> listByStatus(LostItemStatus status) {
         return lostItemRepository.findByStatus(status).stream()
                 .map(item -> lostItemMapper.toSummaryDto(item, caseRepository.findByLostItem_LostItemId(item.getLostItemId()).orElse(null)))

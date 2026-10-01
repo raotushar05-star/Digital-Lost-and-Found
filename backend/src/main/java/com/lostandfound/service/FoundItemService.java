@@ -148,6 +148,7 @@ public class FoundItemService {
                 .build();
     }
 
+    @Transactional(readOnly = true)
     public FoundItemAdminDto getAdminDetail(UUID foundItemId, UserPrincipal principal) {
         assertPolice(principal);
         FoundItem item = getEntityById(foundItemId);
@@ -155,6 +156,7 @@ public class FoundItemService {
         return foundItemMapper.toAdminDto(item, linkedCase);
     }
 
+    @Transactional(readOnly = true)
     public FoundItemPublicDto getPublicDetail(UUID foundItemId) {
         FoundItem item = getEntityById(foundItemId);
         if (item.getVerificationStatus() != FoundItemVerificationStatus.VERIFIED) {
@@ -163,6 +165,7 @@ public class FoundItemService {
         return foundItemMapper.toPublicDto(item);
     }
 
+    @Transactional(readOnly = true)
     public List<FoundItemAdminDto> getStationInventory(UUID stationId, UserPrincipal principal) {
         assertPolice(principal);
         if ("POLICE_OFFICER".equals(principal.getRole()) && !stationId.equals(principal.getStationId())) {

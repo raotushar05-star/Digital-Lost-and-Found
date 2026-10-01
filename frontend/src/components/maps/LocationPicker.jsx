@@ -1,5 +1,5 @@
-import React, { useCallback, useMemo, useState } from "react";
-import { MapContainer, TileLayer, Marker, useMapEvents } from "react-leaflet";
+import React, { useCallback, useMemo, useRef, useState } from "react";
+import { MapContainer, TileLayer, Marker, useMap, useMapEvents } from "react-leaflet";
 import "./leafletSetup";
 
 const DEFAULT_CENTER = [12.9716, 77.5946]; // Bengaluru, used as a sensible fallback
@@ -13,6 +13,16 @@ function ClickHandler({ onPick }) {
   return null;
 }
 
+// react-leaflet only reads MapContainer's `center` prop on the very first
+// render - changing it later does nothing. To recenter programmatically
+// (e.g. after geolocation resolves), we grab the underlying Leaflet map
+// instance via useMap() and stash it in a ref the parent can call directly.
+function MapRefBinder({ mapRef }) {
+  const map = useMap();
+  mapRef.current = map;
+  return null;
+}
+
 /**
  * Map + Location Module: lets a citizen or officer pick the approximate
  * lost/found location by clicking the map, or by using their current
@@ -20,6 +30,7 @@ function ClickHandler({ onPick }) {
  */
 export default function LocationPicker({ value, onChange, height = 320 }) {
   const [locating, setLocating] = useState(false);
+  const mapRef = useRef(null);
   const center = useMemo(() => {
     if (value && value.latitude && value.longitude) {
       return [Number(value.latitude), Number(value.longitude)];
@@ -39,7 +50,14 @@ export default function LocationPicker({ value, onChange, height = 320 }) {
     setLocating(true);
     navigator.geolocation.getCurrentPosition(
       (pos) => {
-        handlePick(pos.coords.latitude, pos.coords.longitude);
+        const { latitude, longitude } = pos.coords;
+        handlePick(latitude, longitude);
+        // Manual map clicks don't need a recenter (the clicked point is
+        // already on screen); geolocation can jump far outside the current
+        // view, so recenter explicitly here.
+        if (mapRef.current) {
+          mapRef.current.setView([latitude, longitude], 15, { animate: true });
+        }
         setLocating(false);
       },
       () => setLocating(false),
@@ -66,6 +84,7 @@ export default function LocationPicker({ value, onChange, height = 320 }) {
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           />
           <ClickHandler onPick={handlePick} />
+          <MapRefBinder mapRef={mapRef} />
           {hasPin && <Marker position={[Number(value.latitude), Number(value.longitude)]} />}
         </MapContainer>
       </div>

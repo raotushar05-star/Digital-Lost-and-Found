@@ -91,12 +91,14 @@ public class ClaimService {
                 .build();
     }
 
+    @Transactional(readOnly = true)
     public ClaimDetailDto getById(UUID claimId, UserPrincipal principal) {
         Claim claim = getEntityById(claimId);
         assertCanView(claim, principal);
         return claimMapper.toDetailDto(claim);
     }
 
+    @Transactional(readOnly = true)
     public List<ClaimSummaryDto> getClaimsForFoundItem(UUID foundItemId, UserPrincipal principal) {
         assertPolice(principal);
         return claimRepository.findByFoundItem_FoundItemIdOrderByCreatedAtDesc(foundItemId).stream()

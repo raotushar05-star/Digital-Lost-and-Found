@@ -98,12 +98,14 @@ public class CaseService {
                 .orElseThrow(() -> new ResourceNotFoundException("Case not found: " + caseId));
     }
 
+    @Transactional(readOnly = true)
     public CaseDto getDto(UUID caseId, UserPrincipal principal) {
         Case c = getById(caseId);
         assertCanView(c, principal);
         return caseMapper.toDto(c);
     }
 
+    @Transactional(readOnly = true)
     public CaseHistoryResponse getHistory(UUID caseId, UserPrincipal principal) {
         Case c = getById(caseId);
         assertCanView(c, principal);

@@ -54,6 +54,7 @@ public class UserService {
         return getEntityById(com.lostandfound.security.SecurityUtils.getCurrentUserId());
     }
 
+    @Transactional(readOnly = true)
     public UserProfileDto getProfile(UUID userId) {
         return userMapper.toProfileDto(getEntityById(userId));
     }
@@ -75,24 +76,28 @@ public class UserService {
         return userMapper.toProfileDto(userRepository.save(user));
     }
 
+    @Transactional(readOnly = true)
     public List<LostItemSummaryDto> getMyLostItems(UUID userId) {
         return lostItemRepository.findByOwner_UserIdOrderByCreatedAtDesc(userId).stream()
                 .map(item -> lostItemMapper.toSummaryDto(item, caseRepository.findByLostItem_LostItemId(item.getLostItemId()).orElse(null)))
                 .collect(Collectors.toList());
     }
 
+    @Transactional(readOnly = true)
     public List<FoundReportDto> getMyFoundReports(UUID userId) {
         return foundReportRepository.findByFinder_UserIdOrderByCreatedAtDesc(userId).stream()
                 .map(report -> foundReportMapper.toDto(report, null, java.util.List.of()))
                 .collect(Collectors.toList());
     }
 
+    @Transactional(readOnly = true)
     public List<ClaimSummaryDto> getMyClaims(UUID userId) {
         return claimRepository.findByClaimant_UserIdOrderByCreatedAtDesc(userId).stream()
                 .map(claimMapper::toSummaryDto)
                 .collect(Collectors.toList());
     }
 
+    @Transactional(readOnly = true)
     public List<CaseDto> getMyCases(UUID userId) {
         Map<UUID, Case> cases = new LinkedHashMap<>();
 

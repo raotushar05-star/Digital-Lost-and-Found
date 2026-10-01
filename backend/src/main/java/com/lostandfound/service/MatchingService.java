@@ -1,10 +1,15 @@
 package com.lostandfound.service;
 
+import com.lostandfound.dto.match.MatchDto;
 import com.lostandfound.entity.*;
 import com.lostandfound.entity.enums.*;
+import com.lostandfound.exception.ForbiddenException;
+import com.lostandfound.exception.ResourceNotFoundException;
+import com.lostandfound.mapper.MatchMapper;
 import com.lostandfound.repository.FoundItemRepository;
 import com.lostandfound.repository.LostItemRepository;
 import com.lostandfound.repository.MatchRepository;
+import com.lostandfound.security.UserPrincipal;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -17,6 +22,7 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
@@ -31,11 +37,33 @@ public class MatchingService {
     private final LostItemRepository lostItemRepository;
     private final FoundItemRepository foundItemRepository;
     private final MatchRepository matchRepository;
+    private final MatchMapper matchMapper;
     private final CaseService caseService;
     private final NotificationService notificationService;
 
     @Value("${app.matching.minimum-score:40.0}")
     private double minimumScore;
+
+    @Transactional(readOnly = true)
+    public List<MatchDto> getMyMatches(UUID userId) {
+        return matchRepository.findByLostItem_Owner_UserIdOrderByCreatedAtDesc(userId).stream()
+                .map(matchMapper::toDto)
+                .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public List<MatchDto> getMatchesForLostItem(UUID lostItemId, UserPrincipal principal) {
+        LostItem lostItem = lostItemRepository.findById(lostItemId)
+                .orElseThrow(() -> new ResourceNotFoundException("Lost item not found: " + lostItemId));
+        boolean isOwner = lostItem.getOwner().getUserId().equals(principal.getUserId());
+        boolean isPolice = "POLICE_OFFICER".equals(principal.getRole()) || "POLICE_ADMIN".equals(principal.getRole()) || "SYSTEM_ADMIN".equals(principal.getRole());
+        if (!isOwner && !isPolice) {
+            throw new ForbiddenException("You do not have permission to view matches for this item");
+        }
+        return matchRepository.findByLostItem_LostItemIdOrderByMatchScoreDesc(lostItemId).stream()
+                .map(matchMapper::toDto)
+                .collect(Collectors.toList());
+    }
 
     @Transactional
     public int generateForLostItem(LostItem lostItem) {

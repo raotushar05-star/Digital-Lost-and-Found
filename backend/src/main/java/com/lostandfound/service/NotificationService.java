@@ -25,6 +25,7 @@ public class NotificationService {
 
     private final NotificationRepository notificationRepository;
     private final NotificationMapper notificationMapper;
+    private final EmailService emailService;
 
     @Transactional
     public Notification notify(User user, NotificationType type, String title, String message, Case relatedCase, Match relatedMatch) {
@@ -36,9 +37,12 @@ public class NotificationService {
                 .relatedCase(relatedCase)
                 .relatedMatch(relatedMatch)
                 .build();
-        return notificationRepository.save(notification);
+        notification = notificationRepository.save(notification);
+        emailService.sendNotificationEmail(user, title, message);
+        return notification;
     }
 
+    @Transactional(readOnly = true)
     public PagedResponse<NotificationDto> getMyNotifications(UUID userId, int page, int size) {
         Page<Notification> result = notificationRepository.findByUser_UserIdOrderByCreatedAtDesc(
                 userId, PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt")));

@@ -83,6 +83,7 @@ public class EvidenceService {
         return evidenceMapper.toDto(evidence);
     }
 
+    @Transactional(readOnly = true)
     public List<EvidenceDto> getEvidence(UUID claimId, UserPrincipal principal) {
         Claim claim = claimRepository.findById(claimId)
                 .orElseThrow(() -> new com.lostandfound.exception.ResourceNotFoundException("Claim not found: " + claimId));

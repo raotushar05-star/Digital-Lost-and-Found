@@ -43,6 +43,7 @@ public class DisputeService {
     private final AuditService auditService;
     private final DisputeMapper disputeMapper;
 
+    @Transactional(readOnly = true)
     public List<DisputeDto> getDisputesForFoundItem(UUID foundItemId) {
         return disputeRepository.findByFoundItem_FoundItemIdOrderByCreatedAtDesc(foundItemId).stream()
                 .map(disputeMapper::toDto)

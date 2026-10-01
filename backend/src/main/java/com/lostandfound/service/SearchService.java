@@ -8,6 +8,7 @@ import com.lostandfound.repository.FoundItemRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.Comparator;
@@ -28,6 +29,7 @@ public class SearchService {
     private final FoundItemRepository foundItemRepository;
     private final FoundItemMapper foundItemMapper;
 
+    @Transactional(readOnly = true)
     public PagedResponse<FoundItemSearchResultDto> search(UUID categoryId, String city, Double latitude, Double longitude,
                                                             Double radiusKm, LocalDate dateFrom, LocalDate dateTo,
                                                             String color, String brand, String keyword,
@@ -71,6 +73,7 @@ public class SearchService {
         return PagedResponse.of(pageContent, page, size, totalElements);
     }
 
+    @Transactional(readOnly = true)
     public List<FoundItemSearchResultDto> nearby(double latitude, double longitude, double radiusKm) {
         Specification<FoundItem> spec = FoundItemSpecifications.combine();
         return foundItemRepository.findAll(spec).stream()

@@ -94,6 +94,7 @@ public class FoundReportService {
                 .build();
     }
 
+    @Transactional(readOnly = true)
     public FoundReportDto getById(UUID foundReportId, UserPrincipal principal) {
         FoundReport report = getEntityById(foundReportId);
         boolean isFinder = report.getFinder().getUserId().equals(principal.getUserId());

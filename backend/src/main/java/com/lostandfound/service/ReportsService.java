@@ -9,6 +9,7 @@ import com.lostandfound.entity.enums.FoundItemVerificationStatus;
 import com.lostandfound.repository.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -27,6 +28,7 @@ public class ReportsService {
     private final HandoverRecordRepository handoverRecordRepository;
     private final PoliceStationRepository stationRepository;
 
+    @Transactional(readOnly = true)
     public ReportsSummaryDto getSummary(UUID stationId, LocalDate dateFrom, LocalDate dateTo) {
         List<FoundItem> foundItems = foundItemRepository.findAll().stream()
                 .filter(fi -> stationId == null || fi.getStation().getStationId().equals(stationId))
@@ -61,6 +63,7 @@ public class ReportsService {
                 .build();
     }
 
+    @Transactional(readOnly = true)
     public List<StationReportDto> getStationReports(LocalDate dateFrom, LocalDate dateTo) {
         List<PoliceStation> stations = stationRepository.findByIsActiveTrue();
         List<FoundItem> allFoundItems = foundItemRepository.findAll();

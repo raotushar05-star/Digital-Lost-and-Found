@@ -25,10 +25,12 @@ public class StationService {
     private final StationMapper stationMapper;
     private final LocationService locationService;
 
+    @Transactional(readOnly = true)
     public List<StationDto> getAllStations() {
         return stationRepository.findAll().stream().map(stationMapper::toDto).collect(Collectors.toList());
     }
 
+    @Transactional(readOnly = true)
     public StationDto getById(UUID stationId) {
         return stationMapper.toDto(getEntityById(stationId));
     }
