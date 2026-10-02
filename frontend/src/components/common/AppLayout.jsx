@@ -28,12 +28,6 @@ const ADMIN_NAV = [
   { to: "/admin/categories", label: "Categories" }
 ];
 
-const SYSTEM_ADMIN_SIDE_NAV = [
-  { to: "/admin/stations", label: "Police Stations" },
-  { to: "/admin/categories", label: "Categories" },
-  { to: "/police/reports", label: "Reports" }
-];
-
 export default function AppLayout({ children }) {
   const { user, profile, isAuthenticated, isPolice, isAdmin, logout } = useAuth();
   const navigate = useNavigate();
@@ -68,6 +62,7 @@ export default function AppLayout({ children }) {
               {isPolice && <span className="text-muted-soft fw-normal"> · Police Portal</span>}
             </span>
           </Link>
+
           {!isAuthenticated ? (
             <div className="d-flex gap-2">
               <Link to="/search" className="btn btn-outline-primary btn-sm d-none d-sm-inline-block">
@@ -90,25 +85,45 @@ export default function AppLayout({ children }) {
                   </span>
                 )}
               </Link>
+
               <div className="dropdown">
                 <button
                   className="btn btn-outline-primary btn-sm dropdown-toggle"
                   type="button"
                   data-bs-toggle="dropdown"
+                  aria-expanded="false"
                 >
                   {user?.name || "Account"}
                 </button>
-                <ul className="dropdown-menu dropdown-menu-end">
-                  <li>
-                    <span className="dropdown-item-text text-muted-soft" style={{ fontSize: "0.78rem" }}>
+                <ul className="dropdown-menu dropdown-menu-end" style={{ minWidth: 220 }}>
+                  <li className="px-3 py-1">
+                    <div className="fw-medium" style={{ fontSize: "0.88rem" }}>
+                      {user?.name}
+                    </div>
+                    {profile?.email && (
+                      <div className="text-muted-soft" style={{ fontSize: "0.76rem" }}>
+                        {profile.email}
+                      </div>
+                    )}
+                    <span className="stamp stamp-neutral mt-1" style={{ fontSize: "0.65rem" }}>
                       {profile?.role?.replaceAll("_", " ")}
                     </span>
                   </li>
                   <li>
+                    <hr className="dropdown-divider" />
+                  </li>
+                  <li>
                     <button className="dropdown-item" onClick={() => navigate("/profile")}>
-                      Profile
+                      Profile &amp; settings
                     </button>
                   </li>
+                  {!isPolice && (
+                    <li>
+                      <button className="dropdown-item" onClick={() => navigate("/claims")}>
+                        My claims
+                      </button>
+                    </li>
+                  )}
                   {isAdmin && (
                     <>
                       <li>
