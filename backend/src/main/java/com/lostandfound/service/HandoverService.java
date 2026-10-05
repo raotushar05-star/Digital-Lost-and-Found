@@ -8,6 +8,7 @@ import com.lostandfound.exception.BadRequestException;
 import com.lostandfound.exception.ConflictException;
 import com.lostandfound.exception.ResourceNotFoundException;
 import com.lostandfound.repository.ClaimRepository;
+import com.lostandfound.repository.FoundReportRepository;
 import com.lostandfound.repository.HandoverRecordRepository;
 import com.lostandfound.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -26,6 +27,7 @@ public class HandoverService {
 
     private final HandoverRecordRepository handoverRecordRepository;
     private final ClaimRepository claimRepository;
+    private final FoundReportRepository foundReportRepository;
     private final UserRepository userRepository;
     private final CaseService caseService;
     private final NotificationService notificationService;
@@ -61,6 +63,10 @@ public class HandoverService {
         foundItem.setCustodyStatus(CustodyStatus.RETURNED);
         caseService.findAndTransition(foundItem, CaseStatus.RETURNED, officer, "Item physically handed over to recipient");
         caseService.findAndTransition(foundItem, CaseStatus.RESOLVED, officer, "Case resolved after successful handover");
+        if (foundItem.getFoundReport() != null) {
+            foundItem.getFoundReport().setStatus(FoundReportStatus.RETURNED);
+            foundReportRepository.save(foundItem.getFoundReport());
+        }
 
         if (claim.getLostItem() != null) {
             claim.getLostItem().setStatus(LostItemStatus.RESOLVED);

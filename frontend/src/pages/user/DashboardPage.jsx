@@ -13,14 +13,18 @@ import { formatDate } from "../../utils/format";
 export default function DashboardPage() {
   const { user } = useAuth();
   const [lostItems, setLostItems] = useState([]);
+  const [foundReports, setFoundReports] = useState([]);
   const [claims, setClaims] = useState([]);
   const [matches, setMatches] = useState([]);
   const [loading, setLoading] = useState(true);
+  const activeLostItems = lostItems.filter((item) => !["RESOLVED", "RETURNED"].includes(item.status));
+  const activeFoundReports = foundReports.filter((report) => report.status !== "RETURNED");
 
   useEffect(() => {
-    Promise.all([userService.getMyLostItems(), userService.getMyClaims(), matchService.getMyMatches()])
-      .then(([li, cl, mt]) => {
+    Promise.all([userService.getMyLostItems(), userService.getMyFoundReports(), userService.getMyClaims(), matchService.getMyMatches()])
+      .then(([li, fr, cl, mt]) => {
         setLostItems(li);
+        setFoundReports(fr);
         setClaims(cl);
         setMatches(mt);
       })
@@ -55,14 +59,17 @@ export default function DashboardPage() {
                   Your lost-item reports
                 </h2>
                 <span className="text-muted-soft font-mono" style={{ fontSize: "0.75rem" }}>
-                  {lostItems.length} total
+                  {activeLostItems.length} active
                 </span>
               </div>
-              {lostItems.length === 0 ? (
-                <EmptyState title="Nothing reported yet" message="Lost something? File a report to get matched." />
+              {activeLostItems.length === 0 ? (
+                <EmptyState
+                  title={lostItems.length === 0 ? "Nothing reported yet" : "No active lost-item reports"}
+                  message={lostItems.length === 0 ? "Lost something? File a report to get matched." : "Completed reports are no longer shown here."}
+                />
               ) : (
                 <div className="list-group list-group-flush">
-                  {lostItems.slice(0, 6).map((item) => (
+                  {activeLostItems.map((item) => (
                     <Link
                       key={item.lostItemId}
                       to={`/lost-items/${item.lostItemId}`}
@@ -76,6 +83,44 @@ export default function DashboardPage() {
                       </div>
                       <StatusStamp status={item.status} />
                     </Link>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="card p-3 mb-4">
+              <div className="d-flex justify-content-between align-items-center mb-2">
+                <h2 style={{ fontSize: "1.05rem" }} className="mb-0">
+                  Your found-item reports
+                </h2>
+                <span className="text-muted-soft font-mono" style={{ fontSize: "0.75rem" }}>
+                  {activeFoundReports.length} active
+                </span>
+              </div>
+              {activeFoundReports.length === 0 ? (
+                <EmptyState
+                  title={foundReports.length === 0 ? "No found items reported yet" : "No active found-item reports"}
+                  message={foundReports.length === 0 ? "Reports you submit will appear here." : "Returned items are no longer shown here."}
+                />
+              ) : (
+                <div className="list-group list-group-flush">
+                  {activeFoundReports.map((report) => (
+                    <div
+                      key={report.foundReportId}
+                      className="list-group-item d-flex justify-content-between align-items-center px-0"
+                    >
+                      <div>
+                        <div className="fw-medium">{report.category}</div>
+                        <div className="text-muted-soft" style={{ fontSize: "0.78rem" }}>
+                          {report.description?.slice(0, 60)} · Found {formatDate(report.foundDate)}
+                          {report.location?.city ? ` · ${report.location.city}` : ""}
+                        </div>
+                        <div className="text-muted-soft font-mono" style={{ fontSize: "0.7rem" }}>
+                          Reference: {report.foundReportId}
+                        </div>
+                      </div>
+                      <StatusStamp status={report.status} />
+                    </div>
                   ))}
                 </div>
               )}

@@ -9,6 +9,7 @@ import com.lostandfound.entity.ItemPhoto;
 import com.lostandfound.entity.Location;
 import com.lostandfound.entity.User;
 import com.lostandfound.entity.enums.FoundReportStatus;
+import com.lostandfound.entity.enums.NotificationType;
 import com.lostandfound.entity.enums.PhotoVisibility;
 import com.lostandfound.exception.BadRequestException;
 import com.lostandfound.exception.ForbiddenException;
@@ -28,6 +29,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 /**
  * Handles preliminary finder submissions only. A found_report is NOT an
@@ -51,6 +53,7 @@ public class FoundReportService {
     private final LocationService locationService;
     private final FileStorageService fileStorageService;
     private final AuditService auditService;
+    private final NotificationService notificationService;
     private final FoundReportMapper foundReportMapper;
     private final PhotoMapper photoMapper;
 
@@ -85,6 +88,15 @@ public class FoundReportService {
                 .build();
         itemPhotoRepository.save(itemPhoto);
 
+        notificationService.notify(
+                finder,
+                NotificationType.GENERAL,
+                "Found item report received",
+                "Your found-item report was submitted successfully and is now pending police review.",
+                null,
+                null
+        );
+
         auditService.log(finder, "FOUND_REPORT_SUBMITTED", "FoundReport", report.getFoundReportId());
 
         return FoundReportCreateResponse.builder()
@@ -109,6 +121,19 @@ public class FoundReportService {
                 itemPhotoRepository.findByFoundReport_FoundReportId(foundReportId));
         return foundReportMapper.toDto(report, linkedFoundItemId, photos);
     }
+
+        @Transactional(readOnly = true)
+        public List<FoundReportDto> getSubmittedReports(UserPrincipal principal) {
+                boolean isPolice = "POLICE_OFFICER".equals(principal.getRole())
+                                || "POLICE_ADMIN".equals(principal.getRole())
+                                || "SYSTEM_ADMIN".equals(principal.getRole());
+                if (!isPolice) {
+                        throw new ForbiddenException("Only police staff can view submitted found reports");
+                }
+                return foundReportRepository.findByStatusOrderByCreatedAtDesc(FoundReportStatus.SUBMITTED).stream()
+                                .map(report -> getById(report.getFoundReportId(), principal))
+                                .collect(Collectors.toList());
+        }
 
     public FoundReport getEntityById(UUID foundReportId) {
         return foundReportRepository.findById(foundReportId)

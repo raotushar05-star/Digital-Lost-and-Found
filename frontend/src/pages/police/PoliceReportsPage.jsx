@@ -45,14 +45,20 @@ export default function PoliceReportsPage() {
         title="Reports"
         actions={
           <form
-            className="d-flex gap-2"
+            className="d-flex gap-2 align-items-end"
             onSubmit={(e) => {
               e.preventDefault();
               load();
             }}
           >
-            <input type="date" className="form-control form-control-sm" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
-            <input type="date" className="form-control form-control-sm" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
+            <div>
+              <label htmlFor="reports-date-from" className="form-label mb-1" style={{ fontSize: "0.75rem" }}>From</label>
+              <input id="reports-date-from" type="date" className="form-control form-control-sm" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
+            </div>
+            <div>
+              <label htmlFor="reports-date-to" className="form-label mb-1" style={{ fontSize: "0.75rem" }}>To</label>
+              <input id="reports-date-to" type="date" className="form-control form-control-sm" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
+            </div>
             <button className="btn btn-sm btn-outline-primary">Apply</button>
           </form>
         }

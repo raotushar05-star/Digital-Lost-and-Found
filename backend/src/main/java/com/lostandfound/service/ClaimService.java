@@ -9,6 +9,7 @@ import com.lostandfound.entity.enums.CaseStatus;
 import com.lostandfound.entity.enums.ClaimStatus;
 import com.lostandfound.entity.enums.FoundItemVerificationStatus;
 import com.lostandfound.entity.enums.LostItemStatus;
+import com.lostandfound.entity.enums.NotificationType;
 import com.lostandfound.exception.BadRequestException;
 import com.lostandfound.exception.ConflictException;
 import com.lostandfound.exception.ForbiddenException;
@@ -39,6 +40,7 @@ public class ClaimService {
     private final LostItemRepository lostItemRepository;
     private final CaseService caseService;
     private final AuditService auditService;
+    private final NotificationService notificationService;
     private final ClaimMapper claimMapper;
 
     @Transactional
@@ -80,6 +82,18 @@ public class ClaimService {
             lostItem.setStatus(LostItemStatus.CLAIM_SUBMITTED);
             lostItemRepository.save(lostItem);
             caseService.findAndTransition(lostItem, CaseStatus.CLAIM_SUBMITTED, claimant, "Ownership claim submitted");
+        }
+
+        notificationService.notify(claimant, NotificationType.CLAIM_SUBMITTED,
+                "Your claim was submitted",
+                "Your ownership claim is under review by police. You will receive updates as the case progresses.",
+                null, null);
+
+        if (foundItem.getFoundReport() != null && foundItem.getFoundReport().getFinder() != null) {
+            notificationService.notify(foundItem.getFoundReport().getFinder(), NotificationType.CLAIM_SUBMITTED,
+                    "A claim was submitted for your found item",
+                    "Someone has reported ownership of an item you found. Please check the case details for updates.",
+                    null, null);
         }
 
         auditService.log(claimant, "CLAIM_SUBMITTED", "Claim", claim.getClaimId());

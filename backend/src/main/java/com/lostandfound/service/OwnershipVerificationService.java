@@ -76,6 +76,13 @@ public class OwnershipVerificationService {
                     "Police have verified your ownership claim. Please visit the station to complete the handover.",
                     null, null);
 
+            if (foundItem.getFoundReport() != null && foundItem.getFoundReport().getFinder() != null) {
+                notificationService.notify(foundItem.getFoundReport().getFinder(), NotificationType.CLAIM_UPDATE,
+                        "A claim for your found item has been approved",
+                        "Police have verified that the item you reported has been matched to the rightful owner.",
+                        null, null);
+            }
+
             rejectCompetingClaims(claim, officer);
         } else {
             claim.setStatus(ClaimStatus.REJECTED);
@@ -99,6 +106,14 @@ public class OwnershipVerificationService {
                     "Police reviewed your ownership claim and were unable to verify it. " +
                             (request.getVerificationNotes() != null ? request.getVerificationNotes() : ""),
                     null, null);
+
+            if (foundItem.getFoundReport() != null && foundItem.getFoundReport().getFinder() != null) {
+                notificationService.notify(foundItem.getFoundReport().getFinder(), NotificationType.CLAIM_UPDATE,
+                        "A claim for your found item was not approved",
+                        "Police reviewed a claim for the item you reported and did not approve it. " +
+                                (request.getVerificationNotes() != null ? request.getVerificationNotes() : ""),
+                        null, null);
+            }
         }
 
         auditService.log(officer, "OWNERSHIP_VERIFICATION_DECISION", "Claim", claim.getClaimId());

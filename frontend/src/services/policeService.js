@@ -1,6 +1,7 @@
 import apiClient from "./apiClient";
 
 export const policeService = {
+  getSubmittedFoundReports: () => apiClient.get("/police/found-reports").then((r) => r.data),
   intakeFoundItem: (payload) => apiClient.post("/police/found-items", payload).then((r) => r.data),
   getFoundItemDetail: (id) => apiClient.get(`/police/found-items/${id}`).then((r) => r.data),
   getStationInventory: (stationId) => apiClient.get(`/police/stations/${stationId}/found-items`).then((r) => r.data),

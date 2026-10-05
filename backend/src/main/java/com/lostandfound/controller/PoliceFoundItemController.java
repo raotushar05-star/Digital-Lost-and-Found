@@ -5,10 +5,12 @@ import com.lostandfound.dto.file.PhotoUploadResponse;
 import com.lostandfound.dto.founditem.FoundItemAdminDto;
 import com.lostandfound.dto.founditem.FoundItemIntakeRequest;
 import com.lostandfound.dto.founditem.FoundItemIntakeResponse;
+import com.lostandfound.dto.foundreport.FoundReportDto;
 import com.lostandfound.dto.verification.VerificationResponse;
 import com.lostandfound.dto.verification.VerifyFoundItemRequest;
 import com.lostandfound.security.SecurityUtils;
 import com.lostandfound.service.ClaimService;
+import com.lostandfound.service.FoundReportService;
 import com.lostandfound.service.FoundItemService;
 import com.lostandfound.service.UserService;
 import jakarta.validation.Valid;
@@ -29,8 +31,14 @@ import java.util.UUID;
 public class PoliceFoundItemController {
 
     private final FoundItemService foundItemService;
+    private final FoundReportService foundReportService;
     private final ClaimService claimService;
     private final UserService userService;
+
+    @GetMapping("/found-reports")
+    public List<FoundReportDto> getSubmittedReports() {
+        return foundReportService.getSubmittedReports(SecurityUtils.getCurrentPrincipal());
+    }
 
     @PostMapping("/found-items")
     public ResponseEntity<FoundItemIntakeResponse> intake(@Valid @RequestBody FoundItemIntakeRequest request) {

@@ -16,11 +16,13 @@ const today = new Date().toISOString().slice(0, 10);
 export default function FoundItemIntakePage() {
   const navigate = useNavigate();
   const { profile } = useAuth();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const foundReportId = searchParams.get("foundReportId");
 
   const [categories, setCategories] = useState([]);
   const [stations, setStations] = useState([]);
+  const [pendingReports, setPendingReports] = useState([]);
+  const [reportLoadError, setReportLoadError] = useState(null);
   const [linkedReport, setLinkedReport] = useState(null);
   const [form, setForm] = useState({
     stationId: "",
@@ -38,6 +40,9 @@ export default function FoundItemIntakePage() {
   useEffect(() => {
     categoryService.getCategories().then(setCategories).catch(() => {});
     stationService.getStations().then(setStations).catch(() => {});
+    policeService.getSubmittedFoundReports()
+      .then(setPendingReports)
+      .catch((err) => setReportLoadError(extractErrorMessage(err)));
   }, []);
 
   useEffect(() => {
@@ -48,8 +53,14 @@ export default function FoundItemIntakePage() {
 
   // Fetch the citizen's found_report exactly once when a foundReportId is present.
   useEffect(() => {
-    if (!foundReportId) return;
-    foundReportService.getById(foundReportId).then(setLinkedReport);
+    if (!foundReportId) {
+      setLinkedReport(null);
+      return;
+    }
+    setLinkedReport(null);
+    foundReportService.getById(foundReportId)
+      .then(setLinkedReport)
+      .catch((err) => setError(extractErrorMessage(err)));
   }, [foundReportId]);
 
   // Pre-fill the intake form once both the report and the category list are loaded,
@@ -100,22 +111,63 @@ export default function FoundItemIntakePage() {
         subtitle="Only an authorized officer may create the official custody record."
       />
 
-      {linkedReport && linkedReport.photos && linkedReport.photos.length > 0 && (
-        <div className="card p-3 mb-3" style={{ maxWidth: 760 }}>
-          <div className="page-eyebrow mb-2">Citizen's proof-of-discovery photo</div>
-          <p className="text-muted-soft mb-2" style={{ fontSize: "0.82rem" }}>
-            Submitted by the finder at report time. Compare against the physical item before registering it.
-          </p>
-          <div className="d-flex gap-2 flex-wrap">
-            {linkedReport.photos.map((p) => (
-              <img
-                key={p.photoId}
-                src={p.fileUrl}
-                alt="Found report submission"
-                style={{ width: 140, height: 140, objectFit: "cover", borderRadius: "var(--radius-sm)", border: "1px solid var(--line)" }}
-              />
-            ))}
+      <div className="mb-3" style={{ maxWidth: 760 }}>
+        <label className="form-label">Finder report to review</label>
+        <select
+          className="form-select"
+          value={foundReportId || ""}
+          onChange={(event) => setSearchParams(event.target.value ? { foundReportId: event.target.value } : {})}
+        >
+          <option value="">Direct intake without a citizen report</option>
+          {pendingReports.map((report) => (
+            <option key={report.foundReportId} value={report.foundReportId}>
+              {report.category} · {report.location?.city || "City not provided"} · {report.foundDate}
+            </option>
+          ))}
+        </select>
+        {reportLoadError ? (
+          <div className="mt-2"><ErrorAlert message={reportLoadError} /></div>
+        ) : pendingReports.length === 0 ? (
+          <div className="text-muted-soft mt-2" style={{ fontSize: "0.82rem" }}>
+            No new finder reports are waiting for intake.
           </div>
+        ) : null}
+      </div>
+
+      {linkedReport && (
+        <div className="card p-3 mb-3" style={{ maxWidth: 760 }}>
+          <div className="page-eyebrow mb-2">Finder's submitted report</div>
+          <div><strong>Category:</strong> {linkedReport.category}</div>
+          <div><strong>Description:</strong> {linkedReport.description}</div>
+          <div>
+            <strong>Found:</strong> {linkedReport.foundDate} · <strong>City:</strong> {linkedReport.location?.city || "Not provided"}
+          </div>
+          {(linkedReport.brand || linkedReport.color) && (
+            <div>
+              {linkedReport.brand && <><strong>Brand:</strong> {linkedReport.brand} </>}
+              {linkedReport.color && <><strong>Color:</strong> {linkedReport.color}</>}
+            </div>
+          )}
+          <div className="text-muted-soft font-mono mt-1" style={{ fontSize: "0.72rem" }}>
+            Reference: {linkedReport.foundReportId}
+          </div>
+          {linkedReport.photos?.length > 0 && (
+            <>
+              <p className="text-muted-soft mb-2 mt-3" style={{ fontSize: "0.82rem" }}>
+                Submitted photo for comparison before registering the item.
+              </p>
+              <div className="d-flex gap-2 flex-wrap">
+                {linkedReport.photos.map((photo) => (
+                  <img
+                    key={photo.photoId}
+                    src={photo.fileUrl}
+                    alt="Found report submission"
+                    style={{ width: 140, height: 140, objectFit: "cover", borderRadius: "var(--radius-sm)", border: "1px solid var(--line)" }}
+                  />
+                ))}
+              </div>
+            </>
+          )}
         </div>
       )}
 

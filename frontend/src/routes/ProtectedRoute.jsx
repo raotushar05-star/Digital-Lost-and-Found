@@ -16,7 +16,12 @@ export default function ProtectedRoute({ children, allowedRoles }) {
   }
 
   if (allowedRoles && !allowedRoles.includes(role)) {
-    return <Navigate to="/dashboard" replace />;
+    const fallback = role === "SYSTEM_ADMIN"
+      ? "/admin/stations"
+      : role === "POLICE_OFFICER" || role === "POLICE_ADMIN"
+        ? "/police/dashboard"
+        : "/dashboard";
+    return <Navigate to={fallback} replace />;
   }
 
   return children;

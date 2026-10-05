@@ -25,13 +25,15 @@ const POLICE_NAV = [
 
 const ADMIN_NAV = [
   { to: "/admin/stations", label: "Police Stations" },
-  { to: "/admin/categories", label: "Categories" }
+  { to: "/admin/categories", label: "Categories" },
+  { to: "/police/reports", label: "Reports" }
 ];
 
 export default function AppLayout({ children }) {
-  const { user, profile, isAuthenticated, isPolice, isAdmin, logout } = useAuth();
+  const { user, profile, isAuthenticated, isPolice, logout } = useAuth();
   const navigate = useNavigate();
   const [unread, setUnread] = useState(0);
+  const isSystemAdmin = user?.role === "SYSTEM_ADMIN";
 
   useEffect(() => {
     if (!isAuthenticated) return;
@@ -49,17 +51,19 @@ export default function AppLayout({ children }) {
     };
   }, [isAuthenticated]);
 
-  const navItems = isPolice ? POLICE_NAV : USER_NAV;
+  const navItems = isSystemAdmin ? ADMIN_NAV : isPolice ? POLICE_NAV : USER_NAV;
+  const homePath = isSystemAdmin ? "/admin/stations" : isPolice ? "/police/dashboard" : "/dashboard";
 
   return (
     <div className="app-shell">
       <header className="topbar">
         <div className="container-fluid d-flex align-items-center justify-content-between py-2 px-3">
-          <Link to={isAuthenticated ? (isPolice ? "/police/dashboard" : "/dashboard") : "/"} className="brand-mark">
+          <Link to={isAuthenticated ? homePath : "/"} className="brand-mark">
             <span className="brand-crest">FL</span>
             <span>
               FindLine
               {isPolice && <span className="text-muted-soft fw-normal"> · Police Portal</span>}
+              {isSystemAdmin && <span className="text-muted-soft fw-normal"> · System Admin</span>}
             </span>
           </Link>
 
@@ -117,14 +121,14 @@ export default function AppLayout({ children }) {
                       Profile &amp; settings
                     </button>
                   </li>
-                  {!isPolice && (
+                  {user?.role === "USER" && (
                     <li>
                       <button className="dropdown-item" onClick={() => navigate("/claims")}>
                         My claims
                       </button>
                     </li>
                   )}
-                  {isAdmin && (
+                  {isSystemAdmin && (
                     <>
                       <li>
                         <hr className="dropdown-divider" />

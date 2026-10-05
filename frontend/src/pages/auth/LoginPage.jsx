@@ -23,6 +23,8 @@ export default function LoginPage() {
       const dest = location.state?.from?.pathname;
       if (dest) {
         navigate(dest);
+      } else if (user.role === "SYSTEM_ADMIN") {
+        navigate("/admin/stations");
       } else if (user.role === "POLICE_OFFICER" || user.role === "POLICE_ADMIN") {
         navigate("/police/dashboard");
       } else {
