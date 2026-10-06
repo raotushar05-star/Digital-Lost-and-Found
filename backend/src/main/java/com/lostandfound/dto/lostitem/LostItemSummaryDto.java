@@ -2,6 +2,7 @@ package com.lostandfound.dto.lostitem;
 
 import lombok.*;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -15,6 +16,8 @@ public class LostItemSummaryDto {
     private String brand;
     private LocalDate lostDate;
     private String city;
+    private BigDecimal latitude;
+    private BigDecimal longitude;
     private String status;
     private UUID caseId;
     private String caseNumber;

@@ -24,6 +24,8 @@ public class LostItemMapper {
                 .brand(item.getBrand())
                 .lostDate(item.getLostDate())
                 .city(item.getLocation().getCity())
+                .latitude(item.getLocation().getLatitude())
+                .longitude(item.getLocation().getLongitude())
                 .status(item.getStatus().name())
                 .caseId(linkedCase != null ? linkedCase.getCaseId() : null)
                 .caseNumber(linkedCase != null ? linkedCase.getCaseNumber() : null)
