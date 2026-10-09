@@ -10,23 +10,27 @@ const USER_NAV = [
   { to: "/search", label: "Search Found Items" },
   { to: "/map", label: "Map" },
   { to: "/claims", label: "My Claims" },
+  { to: "/feedback", label: "Feedback & Complaints" },
   { to: "/notifications", label: "Notifications" }
 ];
 
 const POLICE_NAV = [
   { to: "/police/dashboard", label: "Dashboard" },
+  { to: "/police/lost-reports", label: "Lost Reports" },
   { to: "/police/found-items/new", label: "Intake Found Item" },
   { to: "/police/found-items", label: "Inventory & Verification" },
   { to: "/police/claims", label: "Claims Management" },
   { to: "/police/disputes", label: "Disputes" },
   { to: "/police/reports", label: "Reports" },
+  { to: "/feedback", label: "Feedback & Complaints" },
   { to: "/notifications", label: "Notifications" }
 ];
 
 const ADMIN_NAV = [
   { to: "/admin/stations", label: "Police Stations" },
   { to: "/admin/categories", label: "Categories" },
-  { to: "/police/reports", label: "Reports" }
+  { to: "/police/reports", label: "Reports" },
+  { to: "/admin/feedback", label: "Feedback & Complaints" }
 ];
 
 export default function AppLayout({ children }) {
@@ -38,16 +42,18 @@ export default function AppLayout({ children }) {
   useEffect(() => {
     if (!isAuthenticated) return;
     let active = true;
-    notificationService
-      .getMyNotifications(0, 50)
-      .then((data) => {
+    const updateUnread = () => {
+      notificationService.getMyNotifications(0, 50).then((data) => {
         if (!active) return;
         const count = (data.content || []).filter((n) => !n.isRead).length;
         setUnread(count);
-      })
-      .catch(() => {});
+      }).catch(() => {});
+    };
+    updateUnread();
+    const intervalId = window.setInterval(updateUnread, 30000);
     return () => {
       active = false;
+      window.clearInterval(intervalId);
     };
   }, [isAuthenticated]);
 

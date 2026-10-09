@@ -3,7 +3,7 @@
 const STATUS_MAP = {
   // Case / lifecycle statuses
   REPORTED: { label: "Reported", tone: "neutral" },
-  RECEIVED: { label: "Received", tone: "progress" },
+  RECEIVED: { label: "Received by police", tone: "progress" },
   POLICE_VERIFIED: { label: "Police Verified", tone: "progress" },
   POTENTIAL_MATCH: { label: "Potential Match", tone: "caution" },
   CLAIM_SUBMITTED: { label: "Claim Submitted", tone: "caution" },
@@ -38,7 +38,8 @@ const STATUS_MAP = {
 
   // Evidence
   ACCEPTED: { label: "Accepted", tone: "success" },
-  INCONCLUSIVE: { label: "Inconclusive", tone: "neutral" }
+  INCONCLUSIVE: { label: "Inconclusive", tone: "neutral" },
+  IN_REVIEW: { label: "In review", tone: "progress" }
 };
 
 export function getStatusMeta(status) {

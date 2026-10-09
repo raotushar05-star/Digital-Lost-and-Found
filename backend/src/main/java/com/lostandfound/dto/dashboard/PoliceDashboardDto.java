@@ -5,6 +5,7 @@ import lombok.*;
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
 public class PoliceDashboardDto {
     private long pendingFoundReports;
+    private long pendingLostReports;
     private long pendingVerifications;
     private long verifiedFoundItems;
     private long pendingClaims;

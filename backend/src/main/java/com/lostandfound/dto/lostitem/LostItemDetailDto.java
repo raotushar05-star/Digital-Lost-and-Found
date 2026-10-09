@@ -14,6 +14,10 @@ public class LostItemDetailDto {
     private UUID lostItemId;
     private UUID ownerId;
     private String ownerName;
+    private String ownerEmail;
+    private String ownerPhone;
+    private UUID assignedStationId;
+    private String assignedStationName;
     private UUID categoryId;
     private String category;
     private String description;

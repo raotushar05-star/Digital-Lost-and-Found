@@ -80,6 +80,9 @@ export default function DashboardPage() {
                         <div className="text-muted-soft" style={{ fontSize: "0.78rem" }}>
                           {item.description?.slice(0, 60)} · Lost {formatDate(item.lostDate)}
                         </div>
+                        <div className="text-muted-soft" style={{ fontSize: "0.75rem" }}>
+                          {item.assignedStationName ? `Assigned to ${item.assignedStationName}` : "Awaiting station assignment"}
+                        </div>
                       </div>
                       <StatusStamp status={item.status} />
                     </Link>
@@ -114,6 +117,9 @@ export default function DashboardPage() {
                         <div className="text-muted-soft" style={{ fontSize: "0.78rem" }}>
                           {report.description?.slice(0, 60)} · Found {formatDate(report.foundDate)}
                           {report.location?.city ? ` · ${report.location.city}` : ""}
+                        </div>
+                        <div className="text-muted-soft" style={{ fontSize: "0.75rem" }}>
+                          {report.assignedStationName ? `Assigned to ${report.assignedStationName}` : "Awaiting station assignment"}
                         </div>
                         <div className="text-muted-soft font-mono" style={{ fontSize: "0.7rem" }}>
                           Reference: {report.foundReportId}

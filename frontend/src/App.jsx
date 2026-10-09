@@ -22,6 +22,8 @@ import ProfilePage from "./pages/user/ProfilePage.jsx";
 import CaseTrackingPage from "./pages/user/CaseTrackingPage.jsx";
 
 import PoliceDashboardPage from "./pages/police/PoliceDashboardPage.jsx";
+import PoliceLostReportsPage from "./pages/police/PoliceLostReportsPage.jsx";
+import PoliceLostReportDetailPage from "./pages/police/PoliceLostReportDetailPage.jsx";
 import FoundItemIntakePage from "./pages/police/FoundItemIntakePage.jsx";
 import FoundItemAdminDetailPage from "./pages/police/FoundItemAdminDetailPage.jsx";
 import FoundItemInventoryPage from "./pages/police/FoundItemInventoryPage.jsx";
@@ -32,9 +34,12 @@ import PoliceReportsPage from "./pages/police/PoliceReportsPage.jsx";
 
 import StationManagementPage from "./pages/admin/StationManagementPage.jsx";
 import CategoryManagementPage from "./pages/admin/CategoryManagementPage.jsx";
+import FeedbackPage from "./pages/user/FeedbackPage.jsx";
+import FeedbackInboxPage from "./pages/admin/FeedbackInboxPage.jsx";
 
 const POLICE_ROLES = ["POLICE_OFFICER", "POLICE_ADMIN"];
 const REPORTS_ROLES = ["POLICE_OFFICER", "POLICE_ADMIN", "SYSTEM_ADMIN"];
+const FEEDBACK_ROLES = ["USER", "POLICE_OFFICER", "POLICE_ADMIN"];
 
 export default function App() {
   return (
@@ -56,11 +61,14 @@ export default function App() {
       <Route path="/claims" element={<ProtectedRoute allowedRoles={["USER"]}><MyClaimsPage /></ProtectedRoute>} />
       <Route path="/claims/:id" element={<ProtectedRoute allowedRoles={["USER"]}><ClaimDetailPage /></ProtectedRoute>} />
       <Route path="/notifications" element={<ProtectedRoute><NotificationsPage /></ProtectedRoute>} />
+      <Route path="/feedback" element={<ProtectedRoute allowedRoles={FEEDBACK_ROLES}><FeedbackPage /></ProtectedRoute>} />
       <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
       <Route path="/cases/:id" element={<ProtectedRoute><CaseTrackingPage /></ProtectedRoute>} />
 
       {/* Police */}
       <Route path="/police/dashboard" element={<ProtectedRoute allowedRoles={POLICE_ROLES}><PoliceDashboardPage /></ProtectedRoute>} />
+      <Route path="/police/lost-reports" element={<ProtectedRoute allowedRoles={POLICE_ROLES}><PoliceLostReportsPage /></ProtectedRoute>} />
+      <Route path="/police/lost-reports/:id" element={<ProtectedRoute allowedRoles={POLICE_ROLES}><PoliceLostReportDetailPage /></ProtectedRoute>} />
       <Route path="/police/found-items/new" element={<ProtectedRoute allowedRoles={POLICE_ROLES}><FoundItemIntakePage /></ProtectedRoute>} />
       <Route path="/police/found-items" element={<ProtectedRoute allowedRoles={POLICE_ROLES}><FoundItemInventoryPage /></ProtectedRoute>} />
       <Route path="/police/found-items/:id" element={<ProtectedRoute allowedRoles={POLICE_ROLES}><FoundItemAdminDetailPage /></ProtectedRoute>} />
@@ -72,6 +80,7 @@ export default function App() {
       {/* Admin */}
       <Route path="/admin/stations" element={<ProtectedRoute allowedRoles={["SYSTEM_ADMIN"]}><StationManagementPage /></ProtectedRoute>} />
       <Route path="/admin/categories" element={<ProtectedRoute allowedRoles={["SYSTEM_ADMIN"]}><CategoryManagementPage /></ProtectedRoute>} />
+      <Route path="/admin/feedback" element={<ProtectedRoute allowedRoles={["SYSTEM_ADMIN"]}><FeedbackInboxPage /></ProtectedRoute>} />
 
       <Route path="*" element={<LandingPage />} />
     </Routes>

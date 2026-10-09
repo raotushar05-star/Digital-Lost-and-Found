@@ -121,7 +121,7 @@ export default function FoundItemIntakePage() {
           <option value="">Direct intake without a citizen report</option>
           {pendingReports.map((report) => (
             <option key={report.foundReportId} value={report.foundReportId}>
-              {report.category} · {report.location?.city || "City not provided"} · {report.foundDate}
+              {report.category} · {report.location?.city || "City not provided"} · {report.assignedStationName || "Unassigned"} · {report.foundDate}
             </option>
           ))}
         </select>
@@ -139,6 +139,7 @@ export default function FoundItemIntakePage() {
           <div className="page-eyebrow mb-2">Finder's submitted report</div>
           <div><strong>Category:</strong> {linkedReport.category}</div>
           <div><strong>Description:</strong> {linkedReport.description}</div>
+          <div><strong>Assigned station:</strong> {linkedReport.assignedStationName || "Unassigned; this station will take responsibility at intake"}</div>
           <div>
             <strong>Found:</strong> {linkedReport.foundDate} · <strong>City:</strong> {linkedReport.location?.city || "Not provided"}
           </div>

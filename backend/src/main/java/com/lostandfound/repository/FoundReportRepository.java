@@ -10,5 +10,9 @@ import java.util.UUID;
 public interface FoundReportRepository extends JpaRepository<FoundReport, UUID> {
     List<FoundReport> findByFinder_UserIdOrderByCreatedAtDesc(UUID finderId);
     List<FoundReport> findByStatusOrderByCreatedAtDesc(FoundReportStatus status);
+    List<FoundReport> findByStatusAndAssignedStation_StationIdOrderByCreatedAtDesc(FoundReportStatus status, UUID stationId);
+    List<FoundReport> findByStatusAndAssignedStationIsNullOrderByCreatedAtDesc(FoundReportStatus status);
     long countByStatus(FoundReportStatus status);
+    long countByStatusAndAssignedStation_StationId(FoundReportStatus status, UUID stationId);
+    long countByStatusAndAssignedStationIsNull(FoundReportStatus status);
 }

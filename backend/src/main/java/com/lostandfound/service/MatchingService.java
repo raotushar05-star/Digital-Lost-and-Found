@@ -89,7 +89,7 @@ public class MatchingService {
 
     @Transactional
     public int generateForFoundItem(FoundItem foundItem) {
-        List<LostItem> candidates = Arrays.stream(new LostItemStatus[]{LostItemStatus.REPORTED, LostItemStatus.POTENTIAL_MATCH})
+        List<LostItem> candidates = Arrays.stream(new LostItemStatus[]{LostItemStatus.REPORTED, LostItemStatus.RECEIVED, LostItemStatus.POTENTIAL_MATCH})
                 .flatMap(status -> lostItemRepository.findByStatus(status).stream())
                 .filter(li -> li.getCategory().getCategoryId().equals(foundItem.getCategory().getCategoryId()))
                 .collect(Collectors.toList());
@@ -111,7 +111,7 @@ public class MatchingService {
     @Transactional
     public int generateGlobal() {
         int total = 0;
-        for (LostItemStatus status : new LostItemStatus[]{LostItemStatus.REPORTED, LostItemStatus.POTENTIAL_MATCH}) {
+        for (LostItemStatus status : new LostItemStatus[]{LostItemStatus.REPORTED, LostItemStatus.RECEIVED, LostItemStatus.POTENTIAL_MATCH}) {
             for (LostItem lostItem : lostItemRepository.findByStatus(status)) {
                 total += generateForLostItem(lostItem);
             }
@@ -137,7 +137,7 @@ public class MatchingService {
         match.setStatus(MatchStatus.NOTIFIED);
         matchRepository.save(match);
 
-        if (lostItem.getStatus() == LostItemStatus.REPORTED) {
+        if (lostItem.getStatus() == LostItemStatus.REPORTED || lostItem.getStatus() == LostItemStatus.RECEIVED) {
             lostItem.setStatus(LostItemStatus.POTENTIAL_MATCH);
             lostItemRepository.save(lostItem);
             caseService.findAndTransition(lostItem, CaseStatus.POTENTIAL_MATCH, owner, "Potential match identified by the system");

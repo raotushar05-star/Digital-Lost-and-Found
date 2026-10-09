@@ -25,6 +25,8 @@ public class FoundReportMapper {
                 .color(report.getColor())
                 .foundDate(report.getFoundDate())
                 .location(locationMapper.toDto(report.getLocation()))
+                .assignedStationId(report.getAssignedStation() != null ? report.getAssignedStation().getStationId() : null)
+                .assignedStationName(report.getAssignedStation() != null ? report.getAssignedStation().getStationName() : null)
                 .status(report.getStatus().name())
                 .linkedFoundItemId(linkedFoundItemId)
                 .photos(photos)

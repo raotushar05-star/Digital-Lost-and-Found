@@ -49,7 +49,7 @@ public class DataSeeder implements CommandLineRunner {
             userRepository.save(admin);
         }
 
-        PoliceStation demoStation = stationRepository.findByStationCode("PS-BLR-001").orElse(null);
+        PoliceStation demoStation = stationRepository.findByStationCode("PS-MGL-001").orElse(null);
         if (demoStation != null && userRepository.findByEmail("station.admin@lostandfound.local").isEmpty()) {
             User stationAdmin = User.builder()
                     .name("Station Admin")

@@ -19,6 +19,7 @@ export default function PoliceReportsPage() {
   const [stationReports, setStationReports] = useState([]);
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
+  const [appliedRange, setAppliedRange] = useState({ dateFrom: "", dateTo: "" });
   const [loading, setLoading] = useState(true);
 
   const load = () => {
@@ -32,8 +33,86 @@ export default function PoliceReportsPage() {
       .then(([s, st]) => {
         setSummary(s);
         if (st) setStationReports(st);
+        setAppliedRange({ dateFrom, dateTo });
       })
       .finally(() => setLoading(false));
+  };
+
+  const downloadPdf = async () => {
+    if (!summary) return;
+
+    const [{ jsPDF }, { default: autoTable }] = await Promise.all([
+      import("jspdf"),
+      import("jspdf-autotable")
+    ]);
+    const document = new jsPDF({ format: "a4", unit: "pt" });
+    const margin = 42;
+    const pageWidth = document.internal.pageSize.getWidth();
+    const generatedAt = new Date().toLocaleString();
+    const period = appliedRange.dateFrom || appliedRange.dateTo
+      ? `${appliedRange.dateFrom || "Start"} to ${appliedRange.dateTo || "Present"}`
+      : "All dates";
+
+    document.setFont("helvetica", "bold");
+    document.setFontSize(18);
+    document.text("FindLine - Police Reports", margin, 48);
+    document.setFont("helvetica", "normal");
+    document.setFontSize(10);
+    document.text(`Reporting period: ${period}`, margin, 68);
+    document.text(`Generated: ${generatedAt}`, margin, 84);
+
+    autoTable(document, {
+      startY: 104,
+      head: [["Measure", "Count / rate"]],
+      body: [
+        ["Lost items reported", String(summary.lostItems)],
+        ["Found items registered", String(summary.foundItems)],
+        ["Items verified", String(summary.verifiedItems)],
+        ["Claims filed", String(summary.claims)],
+        ["Items recovered", String(summary.recoveredItems)],
+        ["Recovery rate", `${summary.recoveryRate}%`]
+      ],
+      margin: { left: margin, right: margin },
+      headStyles: { fillColor: [25, 101, 95] },
+      styles: { font: "helvetica", fontSize: 9, cellPadding: 6 }
+    });
+
+    if (isAdmin) {
+      const stationStartY = (document.lastAutoTable?.finalY || 104) + 24;
+      document.setFont("helvetica", "bold");
+      document.setFontSize(12);
+      document.text("Station-wise report", margin, stationStartY);
+      autoTable(document, {
+        startY: stationStartY + 8,
+        head: [["Station", "Found", "Verified", "Claims", "Recovered", "Recovery rate"]],
+        body: stationReports.length
+          ? stationReports.map((station) => [
+              station.stationName,
+              String(station.foundItems),
+              String(station.verifiedItems),
+              String(station.claims),
+              String(station.recoveredItems),
+              `${station.recoveryRate}%`
+            ])
+          : [["No station data for this period", "-", "-", "-", "-", "-"]],
+        margin: { left: margin, right: margin },
+        headStyles: { fillColor: [25, 101, 95] },
+        styles: { font: "helvetica", fontSize: 8, cellPadding: 5 },
+        columnStyles: { 0: { cellWidth: 160 } }
+      });
+    }
+
+    const pageCount = document.internal.getNumberOfPages();
+    for (let page = 1; page <= pageCount; page += 1) {
+      document.setPage(page);
+      document.setFont("helvetica", "normal");
+      document.setFontSize(8);
+      document.text(`Page ${page} of ${pageCount}`, pageWidth - margin, 810, { align: "right" });
+    }
+
+    const from = appliedRange.dateFrom || "all";
+    const to = appliedRange.dateTo || "dates";
+    document.save(`findline-police-report-${from}-to-${to}.pdf`);
   };
 
   useEffect(load, []);
@@ -60,6 +139,9 @@ export default function PoliceReportsPage() {
               <input id="reports-date-to" type="date" className="form-control form-control-sm" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
             </div>
             <button className="btn btn-sm btn-outline-primary">Apply</button>
+            <button type="button" className="btn btn-sm btn-primary" disabled={loading || !summary} onClick={downloadPdf}>
+              Download PDF
+            </button>
           </form>
         }
       />

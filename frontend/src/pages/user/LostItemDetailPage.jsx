@@ -125,6 +125,10 @@ export default function LostItemDetailPage() {
                 <div className="text-muted-soft" style={{ fontSize: "0.75rem" }}>Area</div>
                 <div>{item.location?.city}</div>
               </div>
+              <div className="col-6 col-md-3">
+                <div className="text-muted-soft" style={{ fontSize: "0.75rem" }}>Assigned police station</div>
+                <div>{item.assignedStationName || "Awaiting assignment"}</div>
+              </div>
             </div>
             {item.identifyingDetails && (
               <div className="mt-2">

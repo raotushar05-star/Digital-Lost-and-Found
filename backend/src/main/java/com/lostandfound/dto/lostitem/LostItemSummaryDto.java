@@ -18,6 +18,8 @@ public class LostItemSummaryDto {
     private String city;
     private BigDecimal latitude;
     private BigDecimal longitude;
+    private UUID assignedStationId;
+    private String assignedStationName;
     private String status;
     private UUID caseId;
     private String caseNumber;

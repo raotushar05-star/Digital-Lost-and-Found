@@ -49,6 +49,9 @@ public class FoundItemService {
     public FoundItemIntakeResponse intake(User officer, FoundItemIntakeRequest request) {
         PoliceStation station = stationRepository.findById(request.getStationId())
                 .orElseThrow(() -> new ResourceNotFoundException("Police station not found: " + request.getStationId()));
+        if (officer.getStation() == null || !officer.getStation().getStationId().equals(station.getStationId())) {
+            throw new ForbiddenException("You can only intake items at your assigned police station");
+        }
         Category category = categoryRepository.findById(request.getCategoryId())
                 .orElseThrow(() -> new ResourceNotFoundException("Category not found: " + request.getCategoryId()));
         Location location = locationService.createFromDto(request.getLocation());
@@ -59,6 +62,13 @@ public class FoundItemService {
                     .orElseThrow(() -> new ResourceNotFoundException("Found report not found: " + request.getFoundReportId()));
             if (foundItemRepository.findByFoundReport_FoundReportId(linkedReport.getFoundReportId()).isPresent()) {
                 throw new BadRequestException("This found report has already been linked to an official found item");
+            }
+            if (linkedReport.getAssignedStation() != null
+                    && !linkedReport.getAssignedStation().getStationId().equals(station.getStationId())) {
+                throw new ForbiddenException("This finder report is assigned to another police station");
+            }
+            if (linkedReport.getAssignedStation() == null) {
+                linkedReport.setAssignedStation(station);
             }
         }
 

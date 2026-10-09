@@ -19,6 +19,8 @@ public class FoundReportDto {
     private String color;
     private LocalDate foundDate;
     private LocationDto location;
+    private UUID assignedStationId;
+    private String assignedStationName;
     private String status;
     private UUID linkedFoundItemId;
     private List<PhotoDto> photos;

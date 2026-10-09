@@ -6,6 +6,7 @@ import LoadingSpinner from "../../components/common/LoadingSpinner.jsx";
 import { policeService } from "../../services/policeService";
 
 const TILES = [
+  { key: "pendingLostReports", label: "Pending lost reports", tone: "caution", to: "/police/lost-reports" },
   { key: "pendingFoundReports", label: "Pending finder reports", tone: "neutral", to: "/police/found-items/new" },
   { key: "pendingVerifications", label: "Pending item verification", tone: "caution", to: "/police/found-items" },
   { key: "verifiedFoundItems", label: "Verified items in custody", tone: "success", to: "/police/found-items" },

@@ -5,7 +5,9 @@ import com.lostandfound.dto.location.LocationDto;
 import com.lostandfound.dto.lostitem.*;
 import com.lostandfound.entity.*;
 import com.lostandfound.entity.enums.LostItemStatus;
+import com.lostandfound.entity.enums.NotificationType;
 import com.lostandfound.entity.enums.PhotoVisibility;
+import com.lostandfound.entity.enums.Role;
 import com.lostandfound.exception.BadRequestException;
 import com.lostandfound.exception.ForbiddenException;
 import com.lostandfound.exception.ResourceNotFoundException;
@@ -14,6 +16,7 @@ import com.lostandfound.repository.CaseRepository;
 import com.lostandfound.repository.CategoryRepository;
 import com.lostandfound.repository.ItemPhotoRepository;
 import com.lostandfound.repository.LostItemRepository;
+import com.lostandfound.repository.UserRepository;
 import com.lostandfound.security.UserPrincipal;
 import com.lostandfound.util.FileStorageService;
 import lombok.RequiredArgsConstructor;
@@ -24,12 +27,15 @@ import org.springframework.web.multipart.MultipartFile;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
+import java.util.ArrayList;
 
 @Service
 @RequiredArgsConstructor
 public class LostItemService {
 
     private static final Set<LostItemStatus> EDITABLE_STATUSES = Set.of(
+            LostItemStatus.REPORTED, LostItemStatus.RECEIVED, LostItemStatus.POTENTIAL_MATCH);
+        private static final Set<LostItemStatus> WITHDRAWABLE_STATUSES = Set.of(
             LostItemStatus.REPORTED, LostItemStatus.POTENTIAL_MATCH);
 
     private final LostItemRepository lostItemRepository;
@@ -39,6 +45,9 @@ public class LostItemService {
     private final LocationService locationService;
     private final CaseService caseService;
     private final MatchingService matchingService;
+    private final StationAssignmentService stationAssignmentService;
+    private final NotificationService notificationService;
+    private final UserRepository userRepository;
     private final FileStorageService fileStorageService;
     private final AuditService auditService;
     private final LostItemMapper lostItemMapper;
@@ -58,13 +67,15 @@ public class LostItemService {
                 .identifyingDetails(request.getIdentifyingDetails())
                 .lostDate(request.getLostDate())
                 .location(location)
+                .assignedStation(stationAssignmentService.findNearestStation(location).orElse(null))
                 .status(LostItemStatus.REPORTED)
                 .build();
         lostItem = lostItemRepository.save(lostItem);
 
-        caseService.createForLostItem(lostItem, owner);
+        Case linkedCase = caseService.createForLostItem(lostItem, owner);
         auditService.log(owner, "LOST_ITEM_REPORTED", "LostItem", lostItem.getLostItemId());
         matchingService.generateForLostItem(lostItem);
+        notifyPoliceOfLostReport(lostItem, linkedCase);
 
         return LostItemCreateResponse.builder()
                 .lostItemId(lostItem.getLostItemId())
@@ -72,6 +83,36 @@ public class LostItemService {
                 .message("Lost item reported successfully")
                 .build();
     }
+
+            private void notifyPoliceOfLostReport(LostItem report, Case linkedCase) {
+            List<User> recipients = new ArrayList<>();
+            if (report.getAssignedStation() != null) {
+                recipients.addAll(userRepository.findByStation_StationIdAndRoleIn(
+                    report.getAssignedStation().getStationId(), List.of(Role.POLICE_OFFICER, Role.POLICE_ADMIN)));
+            } else {
+                recipients.addAll(userRepository.findByRole(Role.POLICE_OFFICER));
+                recipients.addAll(userRepository.findByRole(Role.POLICE_ADMIN));
+            }
+
+            String assignment = report.getAssignedStation() == null
+                ? "It could not be assigned to a station and is in the unassigned reports queue."
+                : "It is assigned to " + report.getAssignedStation().getStationName() + ".";
+            String message = "New " + report.getCategory().getCategoryName().toLowerCase()
+                + " lost-item report " + (linkedCase != null ? linkedCase.getCaseNumber() : "")
+                + " from " + report.getLocation().getCity() + ". " + assignment
+                + " Open Lost Reports to review it.";
+
+            recipients.stream()
+                .filter(user -> Boolean.TRUE.equals(user.getIsActive()))
+                .forEach(user -> notificationService.notify(
+                    user,
+                    NotificationType.GENERAL,
+                    "New lost-item report assigned",
+                    message,
+                    linkedCase,
+                    null
+                ));
+            }
 
     @Transactional(readOnly = true)
     public LostItemDetailDto getDetail(UUID lostItemId, UserPrincipal principal) {
@@ -111,8 +152,8 @@ public class LostItemService {
     public void withdraw(UUID lostItemId, UserPrincipal principal) {
         LostItem item = getEntityById(lostItemId);
         assertOwner(item, principal);
-        if (item.getStatus() == LostItemStatus.RESOLVED || item.getStatus() == LostItemStatus.RETURNED) {
-            throw new BadRequestException("A resolved or returned lost-item report cannot be withdrawn");
+        if (!WITHDRAWABLE_STATUSES.contains(item.getStatus())) {
+            throw new BadRequestException("A lost-item report can only be withdrawn before police receive it");
         }
         item.setStatus(LostItemStatus.WITHDRAWN);
         lostItemRepository.save(item);
@@ -147,6 +188,60 @@ public class LostItemService {
                 .toList();
     }
 
+    @Transactional(readOnly = true)
+    public List<LostItemSummaryDto> getPoliceLostReports(UserPrincipal principal, LostItemStatus status) {
+        assertPolice(principal);
+        UUID stationId = principal.getStationId();
+        if (stationId == null) {
+            throw new ForbiddenException("Your police account is not assigned to a station");
+        }
+        List<LostItem> reports = new java.util.ArrayList<>(status == null
+                ? lostItemRepository.findByAssignedStation_StationIdOrderByCreatedAtDesc(stationId)
+                : lostItemRepository.findByAssignedStation_StationIdAndStatusOrderByCreatedAtDesc(stationId, status));
+        reports.addAll(status == null
+                ? lostItemRepository.findByAssignedStationIsNullOrderByCreatedAtDesc()
+                : lostItemRepository.findByAssignedStationIsNullAndStatusOrderByCreatedAtDesc(status));
+        reports.sort(java.util.Comparator.comparing(LostItem::getCreatedAt).reversed());
+        return reports.stream()
+                .map(item -> lostItemMapper.toSummaryDto(item, caseRepository.findByLostItem_LostItemId(item.getLostItemId()).orElse(null)))
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public LostItemDetailDto getPoliceLostReport(UUID lostItemId, UserPrincipal principal) {
+        LostItem item = getEntityById(lostItemId);
+        assertCanView(item, principal);
+        Case linkedCase = caseRepository.findByLostItem_LostItemId(lostItemId).orElse(null);
+        return lostItemMapper.toDetailDto(item, linkedCase);
+    }
+
+    @Transactional
+    public LostItemDetailDto acknowledgePoliceReceipt(UUID lostItemId, User officer) {
+        LostItem item = getEntityById(lostItemId);
+        assertStationCanAccess(item.getAssignedStation(), officer);
+        if (item.getStatus() != LostItemStatus.REPORTED) {
+            throw new BadRequestException("Only reports awaiting police receipt can be acknowledged");
+        }
+
+        if (item.getAssignedStation() == null) {
+            item.setAssignedStation(officer.getStation());
+        }
+        item.setStatus(LostItemStatus.RECEIVED);
+        item = lostItemRepository.save(item);
+        caseService.findAndTransition(item, com.lostandfound.entity.enums.CaseStatus.RECEIVED,
+                officer, "Digital lost-item report received by police");
+        auditService.log(officer, "LOST_REPORT_RECEIVED_BY_POLICE", "LostItem", item.getLostItemId());
+        notificationService.notify(item.getOwner(), NotificationType.GENERAL,
+                "Police received your lost-item report",
+                "Police have received your report" + caseRepository.findByLostItem_LostItemId(item.getLostItemId())
+                        .map(linkedCase -> " (case " + linkedCase.getCaseNumber() + ")")
+                        .orElse("") + ". It remains active for matching and review.",
+                null, null);
+
+        Case linkedCase = caseRepository.findByLostItem_LostItemId(item.getLostItemId()).orElse(null);
+        return lostItemMapper.toDetailDto(item, linkedCase);
+    }
+
     public LostItem getEntityById(UUID lostItemId) {
         return lostItemRepository.findById(lostItemId)
                 .orElseThrow(() -> new ResourceNotFoundException("Lost item not found: " + lostItemId));
@@ -160,9 +255,37 @@ public class LostItemService {
 
     private void assertCanView(LostItem item, UserPrincipal principal) {
         boolean isOwner = item.getOwner().getUserId().equals(principal.getUserId());
-        boolean isPolice = "POLICE_OFFICER".equals(principal.getRole()) || "POLICE_ADMIN".equals(principal.getRole()) || "SYSTEM_ADMIN".equals(principal.getRole());
-        if (!isOwner && !isPolice) {
+        if (isOwner || "SYSTEM_ADMIN".equals(principal.getRole())) return;
+        if ("POLICE_OFFICER".equals(principal.getRole()) || "POLICE_ADMIN".equals(principal.getRole())) {
+            assertStationCanAccess(item.getAssignedStation(), principal.getStationId());
+            return;
+        }
+        if (!isOwner) {
             throw new ForbiddenException("You do not have permission to view this lost-item report");
+        }
+    }
+
+    private void assertPolice(UserPrincipal principal) {
+        if (!"POLICE_OFFICER".equals(principal.getRole()) && !"POLICE_ADMIN".equals(principal.getRole())) {
+            throw new ForbiddenException("Only police personnel can browse lost-item reports");
+        }
+    }
+
+    private void assertStationCanAccess(PoliceStation assignedStation, User officer) {
+        if (officer.getStation() == null) {
+            throw new ForbiddenException("Your police account is not assigned to a station");
+        }
+        if (assignedStation != null && !assignedStation.getStationId().equals(officer.getStation().getStationId())) {
+            throw new ForbiddenException("This report is assigned to another police station");
+        }
+    }
+
+    private void assertStationCanAccess(PoliceStation assignedStation, UUID officerStationId) {
+        if (officerStationId == null) {
+            throw new ForbiddenException("Your police account is not assigned to a station");
+        }
+        if (assignedStation != null && !assignedStation.getStationId().equals(officerStationId)) {
+            throw new ForbiddenException("This report is assigned to another police station");
         }
     }
 }

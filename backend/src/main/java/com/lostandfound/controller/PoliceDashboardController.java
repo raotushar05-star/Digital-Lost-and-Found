@@ -1,6 +1,7 @@
 package com.lostandfound.controller;
 
 import com.lostandfound.dto.dashboard.PoliceDashboardDto;
+import com.lostandfound.security.SecurityUtils;
 import com.lostandfound.service.DashboardService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -18,6 +19,6 @@ public class PoliceDashboardController {
 
     @GetMapping
     public PoliceDashboardDto getDashboard() {
-        return dashboardService.getPoliceDashboard();
+        return dashboardService.getPoliceDashboard(SecurityUtils.getCurrentPrincipal());
     }
 }

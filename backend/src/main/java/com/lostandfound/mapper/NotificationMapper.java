@@ -14,6 +14,8 @@ public class NotificationMapper {
                 .title(n.getTitle())
                 .message(n.getMessage())
                 .relatedCaseId(n.getRelatedCase() != null ? n.getRelatedCase().getCaseId() : null)
+                .relatedLostItemId(n.getRelatedCase() != null && n.getRelatedCase().getLostItem() != null
+                    ? n.getRelatedCase().getLostItem().getLostItemId() : null)
                 .relatedMatchId(n.getRelatedMatch() != null ? n.getRelatedMatch().getMatchId() : null)
                 .isRead(n.getIsRead())
                 .createdAt(n.getCreatedAt())

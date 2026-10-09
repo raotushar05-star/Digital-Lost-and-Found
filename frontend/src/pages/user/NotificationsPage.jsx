@@ -5,15 +5,20 @@ import PageHeader from "../../components/common/PageHeader.jsx";
 import LoadingSpinner from "../../components/common/LoadingSpinner.jsx";
 import EmptyState from "../../components/common/EmptyState.jsx";
 import { notificationService } from "../../services/notificationService";
+import { useAuth } from "../../context/AuthContext.jsx";
 import { timeAgo } from "../../utils/format";
 
-function linkFor(n) {
+function linkFor(n, isPolice) {
+  if (n.relatedLostItemId) {
+    return isPolice ? `/police/lost-reports/${n.relatedLostItemId}` : `/lost-items/${n.relatedLostItemId}`;
+  }
   if (n.relatedMatchId) return "/dashboard";
   if (n.relatedCaseId) return `/cases/${n.relatedCaseId}`;
   return null;
 }
 
 export default function NotificationsPage() {
+  const { isPolice } = useAuth();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -53,7 +58,7 @@ export default function NotificationsPage() {
         <div className="card">
           <div className="list-group list-group-flush">
             {data.content.map((n) => {
-              const to = linkFor(n);
+              const to = linkFor(n, isPolice);
               const body = (
                 <div
                   className="d-flex justify-content-between align-items-start p-3"

@@ -52,6 +52,9 @@ class FoundReportServiceTest {
     @Mock
     private LocationService locationService;
 
+        @Mock
+        private StationAssignmentService stationAssignmentService;
+
     @Mock
     private FileStorageService fileStorageService;
 
@@ -119,6 +122,7 @@ class FoundReportServiceTest {
 
         when(categoryRepository.findById(categoryId)).thenReturn(Optional.of(category));
         when(locationService.createFromDto(request.getLocation())).thenReturn(location);
+        when(stationAssignmentService.findNearestStation(location)).thenReturn(Optional.empty());
         when(foundReportRepository.save(any(FoundReport.class))).thenReturn(savedReport);
         when(fileStorageService.store(any(), eq("found-reports"))).thenReturn("uploads/found-reports/test.jpg");
 

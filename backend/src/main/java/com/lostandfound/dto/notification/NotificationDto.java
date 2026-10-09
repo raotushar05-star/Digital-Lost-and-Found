@@ -12,6 +12,7 @@ public class NotificationDto {
     private String title;
     private String message;
     private UUID relatedCaseId;
+    private UUID relatedLostItemId;
     private UUID relatedMatchId;
     private Boolean isRead;
     private LocalDateTime createdAt;

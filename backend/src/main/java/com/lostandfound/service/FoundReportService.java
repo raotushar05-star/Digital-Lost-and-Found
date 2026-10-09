@@ -51,6 +51,7 @@ public class FoundReportService {
     private final CategoryRepository categoryRepository;
     private final ItemPhotoRepository itemPhotoRepository;
     private final LocationService locationService;
+        private final StationAssignmentService stationAssignmentService;
     private final FileStorageService fileStorageService;
     private final AuditService auditService;
     private final NotificationService notificationService;
@@ -74,6 +75,7 @@ public class FoundReportService {
                 .color(request.getColor())
                 .foundDate(request.getFoundDate())
                 .location(location)
+                .assignedStation(stationAssignmentService.findNearestStation(location).orElse(null))
                 .status(FoundReportStatus.SUBMITTED)
                 .build();
         report = foundReportRepository.save(report);
@@ -92,7 +94,8 @@ public class FoundReportService {
                 finder,
                 NotificationType.GENERAL,
                 "Found item report received",
-                "Your found-item report was submitted successfully and is now pending police review.",
+                "Your found-item report was submitted successfully and is now pending review"
+                        + (report.getAssignedStation() != null ? " at " + report.getAssignedStation().getStationName() : " by police") + ".",
                 null,
                 null
         );
@@ -114,6 +117,12 @@ public class FoundReportService {
         if (!isFinder && !isPolice) {
             throw new ForbiddenException("You do not have permission to view this found report");
         }
+                if (!isFinder && !"SYSTEM_ADMIN".equals(principal.getRole())
+                                && (principal.getStationId() == null
+                                || (report.getAssignedStation() != null
+                                && !report.getAssignedStation().getStationId().equals(principal.getStationId())))) {
+                        throw new ForbiddenException("This found report is assigned to another police station");
+                }
         UUID linkedFoundItemId = foundItemRepository.findByFoundReport_FoundReportId(foundReportId)
                 .map(fi -> fi.getFoundItemId())
                 .orElse(null);
@@ -130,7 +139,13 @@ public class FoundReportService {
                 if (!isPolice) {
                         throw new ForbiddenException("Only police staff can view submitted found reports");
                 }
-                return foundReportRepository.findByStatusOrderByCreatedAtDesc(FoundReportStatus.SUBMITTED).stream()
+                if (principal.getStationId() == null) {
+                        throw new ForbiddenException("Your police account is not assigned to a station");
+                }
+                List<FoundReport> reports = new java.util.ArrayList<>(foundReportRepository
+                                .findByStatusAndAssignedStation_StationIdOrderByCreatedAtDesc(FoundReportStatus.SUBMITTED, principal.getStationId()));
+                reports.addAll(foundReportRepository.findByStatusAndAssignedStationIsNullOrderByCreatedAtDesc(FoundReportStatus.SUBMITTED));
+                return reports.stream()
                                 .map(report -> getById(report.getFoundReportId(), principal))
                                 .collect(Collectors.toList());
         }

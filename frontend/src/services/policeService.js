@@ -1,6 +1,9 @@
 import apiClient from "./apiClient";
 
 export const policeService = {
+  getLostReports: () => apiClient.get("/police/lost-reports").then((r) => r.data),
+  getLostReport: (id) => apiClient.get(`/police/lost-reports/${id}`).then((r) => r.data),
+  acknowledgeLostReport: (id) => apiClient.patch(`/police/lost-reports/${id}/receive`).then((r) => r.data),
   getSubmittedFoundReports: () => apiClient.get("/police/found-reports").then((r) => r.data),
   intakeFoundItem: (payload) => apiClient.post("/police/found-items", payload).then((r) => r.data),
   getFoundItemDetail: (id) => apiClient.get(`/police/found-items/${id}`).then((r) => r.data),
