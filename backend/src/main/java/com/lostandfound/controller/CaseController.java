@@ -1,8 +1,10 @@
 package com.lostandfound.controller;
 
 import com.lostandfound.dto.casedto.CaseDto;
+import com.lostandfound.dto.casedto.CaseFileDto;
 import com.lostandfound.dto.casedto.CaseHistoryResponse;
 import com.lostandfound.security.SecurityUtils;
+import com.lostandfound.service.CaseFileService;
 import com.lostandfound.service.CaseService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
@@ -15,6 +17,7 @@ import java.util.UUID;
 public class CaseController {
 
     private final CaseService caseService;
+    private final CaseFileService caseFileService;
 
     @GetMapping("/{caseId}")
     public CaseDto getById(@PathVariable UUID caseId) {
@@ -24,5 +27,10 @@ public class CaseController {
     @GetMapping("/{caseId}/history")
     public CaseHistoryResponse getHistory(@PathVariable UUID caseId) {
         return caseService.getHistory(caseId, SecurityUtils.getCurrentPrincipal());
+    }
+
+    @GetMapping("/{caseId}/file")
+    public CaseFileDto getCaseFile(@PathVariable UUID caseId) {
+        return caseFileService.getById(caseId, SecurityUtils.getCurrentPrincipal());
     }
 }

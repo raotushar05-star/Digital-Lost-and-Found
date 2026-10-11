@@ -1,6 +1,7 @@
 package com.lostandfound.controller;
 
 import com.lostandfound.dto.station.StationCreateRequest;
+import com.lostandfound.dto.station.StationCreateResponse;
 import com.lostandfound.dto.station.StationDto;
 import com.lostandfound.dto.station.StationUpdateRequest;
 import com.lostandfound.service.StationService;
@@ -22,7 +23,7 @@ public class AdminStationController {
     private final StationService stationService;
 
     @PostMapping
-    public ResponseEntity<StationDto> create(@Valid @RequestBody StationCreateRequest request) {
+    public ResponseEntity<StationCreateResponse> create(@Valid @RequestBody StationCreateRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(stationService.create(request));
     }
 

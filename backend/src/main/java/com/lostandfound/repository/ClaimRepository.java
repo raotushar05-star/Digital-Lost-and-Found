@@ -10,6 +10,7 @@ import java.util.UUID;
 public interface ClaimRepository extends JpaRepository<Claim, UUID> {
     List<Claim> findByClaimant_UserIdOrderByCreatedAtDesc(UUID claimantId);
     List<Claim> findByFoundItem_FoundItemIdOrderByCreatedAtDesc(UUID foundItemId);
+    List<Claim> findByLostItem_LostItemIdOrderByCreatedAtDesc(UUID lostItemId);
     long countByFoundItem_FoundItemId(UUID foundItemId);
     long countByStatus(ClaimStatus status);
     List<Claim> findByStatusOrderByCreatedAtDesc(ClaimStatus status);

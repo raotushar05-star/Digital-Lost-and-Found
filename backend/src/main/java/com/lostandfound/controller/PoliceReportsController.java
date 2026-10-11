@@ -1,7 +1,10 @@
 package com.lostandfound.controller;
 
+import com.lostandfound.dto.casedto.CaseFileDto;
 import com.lostandfound.dto.reports.ReportsSummaryDto;
 import com.lostandfound.dto.reports.StationReportDto;
+import com.lostandfound.security.SecurityUtils;
+import com.lostandfound.service.CaseFileService;
 import com.lostandfound.service.ReportsService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -18,6 +21,7 @@ import java.util.UUID;
 public class PoliceReportsController {
 
     private final ReportsService reportsService;
+    private final CaseFileService caseFileService;
 
     @GetMapping("/summary")
     @PreAuthorize("hasAnyRole('POLICE_OFFICER','POLICE_ADMIN','SYSTEM_ADMIN')")
@@ -34,5 +38,19 @@ public class PoliceReportsController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateFrom,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateTo) {
         return reportsService.getStationReports(dateFrom, dateTo);
+    }
+
+    @GetMapping("/case-files")
+    @PreAuthorize("hasAnyRole('POLICE_OFFICER','POLICE_ADMIN','SYSTEM_ADMIN')")
+    public List<CaseFileDto> getCaseFiles(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateFrom,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateTo) {
+        return caseFileService.listForPolice(SecurityUtils.getCurrentPrincipal(), dateFrom, dateTo);
+    }
+
+    @GetMapping("/case-files/{caseId}")
+    @PreAuthorize("hasAnyRole('POLICE_OFFICER','POLICE_ADMIN','SYSTEM_ADMIN')")
+    public CaseFileDto getCaseFile(@PathVariable UUID caseId) {
+        return caseFileService.getById(caseId, SecurityUtils.getCurrentPrincipal());
     }
 }

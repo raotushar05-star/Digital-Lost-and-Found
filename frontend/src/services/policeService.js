@@ -25,5 +25,7 @@ export const policeService = {
   recordHandover: (claimId, payload) => apiClient.post(`/police/claims/${claimId}/handover`, payload).then((r) => r.data),
   getDashboard: () => apiClient.get("/police/dashboard").then((r) => r.data),
   getReportsSummary: (params) => apiClient.get("/police/reports/summary", { params }).then((r) => r.data),
-  getStationReports: (params) => apiClient.get("/police/reports/stations", { params }).then((r) => r.data)
+  getStationReports: (params) => apiClient.get("/police/reports/stations", { params }).then((r) => r.data),
+  getCaseFiles: (params) => apiClient.get("/police/reports/case-files", { params }).then((r) => r.data),
+  getCaseFile: (caseId) => apiClient.get(`/police/reports/case-files/${caseId}`).then((r) => r.data)
 };
