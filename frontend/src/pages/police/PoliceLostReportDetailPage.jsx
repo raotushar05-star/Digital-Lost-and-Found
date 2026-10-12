@@ -1,3 +1,4 @@
+import DownloadServerPdfButton from "../../components/common/DownloadServerPdfButton.jsx";
 import React, { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import AppLayout from "../../components/common/AppLayout.jsx";
@@ -55,6 +56,13 @@ export default function PoliceLostReportDetailPage() {
         subtitle={report.caseNumber ? `Case ${report.caseNumber}` : "Digital citizen report"}
         actions={
           <div className="d-flex gap-2">
+            {report.caseId && (
+              <DownloadServerPdfButton
+                label="Download case PDF"
+                fallbackName={`findline-case-${report.caseNumber || "case"}.pdf`}
+                load={() => policeService.downloadCaseFilePdf(report.caseId)}
+              />
+            )}
             <Link to="/police/lost-reports" className="btn btn-sm btn-outline-primary">Back to reports</Link>
             {report.status === "REPORTED" && (
               <button className="btn btn-sm btn-primary" onClick={acknowledgeReceipt} disabled={acknowledging}>

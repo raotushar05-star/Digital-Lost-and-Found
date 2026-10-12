@@ -1,3 +1,4 @@
+import DownloadServerPdfButton from "../../components/common/DownloadServerPdfButton.jsx";
 import React, { useEffect, useState } from "react";
 import AppLayout from "../../components/common/AppLayout.jsx";
 import PageHeader from "../../components/common/PageHeader.jsx";
@@ -142,6 +143,16 @@ export default function PoliceReportsPage() {
             <button type="button" className="btn btn-sm btn-primary" disabled={loading || !summary} onClick={downloadPdf}>
               Download PDF
             </button>
+            <DownloadServerPdfButton
+              label="All cases (PDF)"
+              fallbackName="findline-all-cases.pdf"
+              load={() =>
+                policeService.downloadAllCaseFilesPdf({
+                  ...(appliedRange.dateFrom && { dateFrom: appliedRange.dateFrom }),
+                  ...(appliedRange.dateTo && { dateTo: appliedRange.dateTo })
+                })
+              }
+            />
           </form>
         }
       />

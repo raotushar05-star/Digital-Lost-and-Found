@@ -1,3 +1,4 @@
+import DownloadServerPdfButton from "../../components/common/DownloadServerPdfButton.jsx";
 import React, { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import AppLayout from "../../components/common/AppLayout.jsx";
@@ -93,9 +94,16 @@ export default function FoundItemAdminDetailPage() {
           )}
         </div>
         {item.caseId && (
-          <Link to={`/cases/${item.caseId}`} className="btn btn-sm btn-outline-primary">
-            Track case
-          </Link>
+          <div className="d-flex gap-2">
+            <DownloadServerPdfButton
+              label="Download case PDF"
+              fallbackName={`findline-case-${item.caseNumber || "case"}.pdf`}
+              load={() => policeService.downloadCaseFilePdf(item.caseId)}
+            />
+            <Link to={`/cases/${item.caseId}`} className="btn btn-sm btn-outline-primary">
+              Track case
+            </Link>
+          </div>
         )}
       </div>
 

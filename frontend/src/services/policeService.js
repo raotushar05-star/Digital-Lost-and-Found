@@ -27,5 +27,9 @@ export const policeService = {
   getReportsSummary: (params) => apiClient.get("/police/reports/summary", { params }).then((r) => r.data),
   getStationReports: (params) => apiClient.get("/police/reports/stations", { params }).then((r) => r.data),
   getCaseFiles: (params) => apiClient.get("/police/reports/case-files", { params }).then((r) => r.data),
-  getCaseFile: (caseId) => apiClient.get(`/police/reports/case-files/${caseId}`).then((r) => r.data)
+  getCaseFile: (caseId) => apiClient.get(`/police/reports/case-files/${caseId}`).then((r) => r.data),
+  downloadCaseFilePdf: (caseId) =>
+    apiClient.get(`/police/reports/case-files/${caseId}/pdf`, { responseType: "blob" }),
+  downloadAllCaseFilesPdf: (params) =>
+    apiClient.get("/police/reports/case-files/pdf", { params, responseType: "blob" })
 };

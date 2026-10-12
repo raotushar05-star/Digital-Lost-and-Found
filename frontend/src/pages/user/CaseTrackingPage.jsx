@@ -47,16 +47,23 @@ export default function CaseTrackingPage() {
 
   return (
     <AppLayout>
-      <div className="mb-4">
-        <div className="page-eyebrow mb-1">
-          {caseData.caseType === "LOST" ? "Lost item case" : "Found item case"}
+      <div className="mb-4 d-flex justify-content-between align-items-start flex-wrap gap-2">
+        <div>
+          <div className="page-eyebrow mb-1">
+            {caseData.caseType === "LOST" ? "Lost item case" : "Found item case"}
+          </div>
+          <div className="d-flex align-items-center gap-2">
+            <h1 style={{ fontSize: "1.5rem" }} className="mb-0 font-mono">
+              {caseData.caseNumber}
+            </h1>
+            <StatusStamp status={caseData.currentStatus} />
+          </div>
         </div>
-        <div className="d-flex align-items-center gap-2">
-          <h1 style={{ fontSize: "1.5rem" }} className="mb-0 font-mono">
-            {caseData.caseNumber}
-          </h1>
-          <StatusStamp status={caseData.currentStatus} />
-        </div>
+        <DownloadServerPdfButton
+          label="Download case PDF"
+          fallbackName={`findline-case-${caseData.caseNumber}.pdf`}
+          load={() => caseService.downloadFilePdf(caseData.caseId)}
+        />
       </div>
 
       <div className="card p-4" style={{ maxWidth: 640 }}>
