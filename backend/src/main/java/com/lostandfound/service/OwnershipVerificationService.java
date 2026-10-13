@@ -7,6 +7,8 @@ import com.lostandfound.entity.enums.*;
 import com.lostandfound.exception.BadRequestException;
 import com.lostandfound.repository.ClaimRepository;
 import com.lostandfound.repository.VerificationRecordRepository;
+import com.lostandfound.security.StationAccess;
+
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -34,7 +36,9 @@ public class OwnershipVerificationService {
     @Transactional
     public VerificationResponse verify(UUID claimId, User officer, VerifyClaimRequest request) {
         Claim claim = claimRepository.findById(claimId)
-                .orElseThrow(() -> new com.lostandfound.exception.ResourceNotFoundException("Claim not found: " + claimId));
+                .orElseThrow(
+                        () -> new com.lostandfound.exception.ResourceNotFoundException("Claim not found: " + claimId));
+        StationAccess.assertOwnStation(officer, claim.getFoundItem().getStation());
         if (claim.getStatus() == ClaimStatus.APPROVED || claim.getStatus() == ClaimStatus.REJECTED) {
             throw new BadRequestException("This claim has already been finalized (" + claim.getStatus() + ")");
         }
@@ -65,10 +69,12 @@ public class OwnershipVerificationService {
             claimRepository.save(claim);
 
             foundItem.setCustodyStatus(CustodyStatus.CLAIMED);
-            caseService.findAndTransition(foundItem, CaseStatus.APPROVED, officer, "Ownership verified and claim approved");
+            caseService.findAndTransition(foundItem, CaseStatus.APPROVED, officer,
+                    "Ownership verified and claim approved");
             if (claim.getLostItem() != null) {
                 claim.getLostItem().setStatus(LostItemStatus.APPROVED);
-                caseService.findAndTransition(claim.getLostItem(), CaseStatus.APPROVED, officer, "Ownership verified and claim approved");
+                caseService.findAndTransition(claim.getLostItem(), CaseStatus.APPROVED, officer,
+                        "Ownership verified and claim approved");
             }
 
             notificationService.notify(claim.getClaimant(), NotificationType.CLAIM_UPDATE,
@@ -88,17 +94,21 @@ public class OwnershipVerificationService {
             claim.setStatus(ClaimStatus.REJECTED);
             claimRepository.save(claim);
 
-            boolean otherActiveClaims = claimRepository.findByFoundItem_FoundItemIdOrderByCreatedAtDesc(foundItem.getFoundItemId())
+            boolean otherActiveClaims = claimRepository
+                    .findByFoundItem_FoundItemIdOrderByCreatedAtDesc(foundItem.getFoundItemId())
                     .stream()
                     .anyMatch(c -> !c.getClaimId().equals(claim.getClaimId())
-                            && (c.getStatus() == ClaimStatus.PENDING || c.getStatus() == ClaimStatus.UNDER_VERIFICATION));
+                            && (c.getStatus() == ClaimStatus.PENDING
+                                    || c.getStatus() == ClaimStatus.UNDER_VERIFICATION));
 
             if (!otherActiveClaims) {
-                caseService.findAndTransition(foundItem, CaseStatus.POLICE_VERIFIED, officer, "Claim rejected; item remains available for other claimants");
+                caseService.findAndTransition(foundItem, CaseStatus.POLICE_VERIFIED, officer,
+                        "Claim rejected; item remains available for other claimants");
             }
             if (claim.getLostItem() != null) {
                 claim.getLostItem().setStatus(LostItemStatus.POTENTIAL_MATCH);
-                caseService.findAndTransition(claim.getLostItem(), CaseStatus.POTENTIAL_MATCH, officer, "Claim rejected; report remains open");
+                caseService.findAndTransition(claim.getLostItem(), CaseStatus.POTENTIAL_MATCH, officer,
+                        "Claim rejected; report remains open");
             }
 
             notificationService.notify(claim.getClaimant(), NotificationType.CLAIM_UPDATE,
@@ -127,10 +137,13 @@ public class OwnershipVerificationService {
     }
 
     private void rejectCompetingClaims(Claim approvedClaim, User officer) {
-        List<Claim> others = claimRepository.findByFoundItem_FoundItemIdOrderByCreatedAtDesc(approvedClaim.getFoundItem().getFoundItemId());
+        List<Claim> others = claimRepository
+                .findByFoundItem_FoundItemIdOrderByCreatedAtDesc(approvedClaim.getFoundItem().getFoundItemId());
         for (Claim other : others) {
-            if (other.getClaimId().equals(approvedClaim.getClaimId())) continue;
-            if (other.getStatus() == ClaimStatus.PENDING || other.getStatus() == ClaimStatus.UNDER_VERIFICATION || other.getStatus() == ClaimStatus.DISPUTED) {
+            if (other.getClaimId().equals(approvedClaim.getClaimId()))
+                continue;
+            if (other.getStatus() == ClaimStatus.PENDING || other.getStatus() == ClaimStatus.UNDER_VERIFICATION
+                    || other.getStatus() == ClaimStatus.DISPUTED) {
                 other.setStatus(ClaimStatus.REJECTED);
                 other.setReviewedBy(officer);
                 other.setReviewedAt(LocalDateTime.now());

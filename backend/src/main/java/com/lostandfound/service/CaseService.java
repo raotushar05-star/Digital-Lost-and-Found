@@ -1,5 +1,6 @@
 package com.lostandfound.service;
 
+import com.lostandfound.security.StationAccess;
 import com.lostandfound.dto.casedto.CaseDto;
 import com.lostandfound.dto.casedto.CaseHistoryEntryDto;
 import com.lostandfound.dto.casedto.CaseHistoryResponse;
@@ -79,14 +80,20 @@ public class CaseService {
         historyRepository.save(history);
     }
 
-    /** Convenience: look up the case for a lost item and transition it, if one exists. */
+    /**
+     * Convenience: look up the case for a lost item and transition it, if one
+     * exists.
+     */
     @Transactional
     public void findAndTransition(LostItem lostItem, CaseStatus newStatus, User changedBy, String remarks) {
         caseRepository.findByLostItem_LostItemId(lostItem.getLostItemId())
                 .ifPresent(c -> transition(c, newStatus, changedBy, remarks));
     }
 
-    /** Convenience: look up the case for a found item and transition it, if one exists. */
+    /**
+     * Convenience: look up the case for a found item and transition it, if one
+     * exists.
+     */
     @Transactional
     public void findAndTransition(FoundItem foundItem, CaseStatus newStatus, User changedBy, String remarks) {
         caseRepository.findByFoundItem_FoundItemId(foundItem.getFoundItemId())
@@ -121,9 +128,20 @@ public class CaseService {
     }
 
     private void assertCanView(Case c, UserPrincipal principal) {
-        boolean isPolice = "POLICE_OFFICER".equals(principal.getRole()) || "POLICE_ADMIN".equals(principal.getRole()) || "SYSTEM_ADMIN".equals(principal.getRole());
-        if (isPolice) return;
-        boolean ownsLost = c.getLostItem() != null && c.getLostItem().getOwner().getUserId().equals(principal.getUserId());
+        if (StationAccess.isSystemAdmin(principal))
+            return;
+        if (StationAccess.isPoliceStaff(principal)) {
+            PoliceStation station = c.getFoundItem() != null ? c.getFoundItem().getStation()
+                    : (c.getLostItem() != null ? c.getLostItem().getAssignedStation() : null);
+            if (station != null) {
+                StationAccess.assertOwnStation(principal, station);
+            } else if (principal.getStationId() == null) {
+                throw new ForbiddenException("Your police account is not assigned to a station");
+            }
+            return;
+        }
+        boolean ownsLost = c.getLostItem() != null
+                && c.getLostItem().getOwner().getUserId().equals(principal.getUserId());
         if (!ownsLost) {
             throw new ForbiddenException("You do not have permission to view this case");
         }

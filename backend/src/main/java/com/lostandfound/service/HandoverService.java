@@ -11,6 +11,8 @@ import com.lostandfound.repository.ClaimRepository;
 import com.lostandfound.repository.FoundReportRepository;
 import com.lostandfound.repository.HandoverRecordRepository;
 import com.lostandfound.repository.UserRepository;
+import com.lostandfound.security.StationAccess;
+
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -37,6 +39,7 @@ public class HandoverService {
     public HandoverResponse recordHandover(UUID claimId, User officer, HandoverRequest request) {
         Claim claim = claimRepository.findById(claimId)
                 .orElseThrow(() -> new ResourceNotFoundException("Claim not found: " + claimId));
+        StationAccess.assertOwnStation(officer, claim.getFoundItem().getStation());
         if (claim.getStatus() != ClaimStatus.APPROVED) {
             throw new BadRequestException("Handover is only allowed after the claim has been approved");
         }
@@ -48,7 +51,8 @@ public class HandoverService {
             throw new ConflictException("This item has already been handed over to another claimant");
         }
         User recipient = userRepository.findById(request.getRecipientId())
-                .orElseThrow(() -> new ResourceNotFoundException("Recipient user not found: " + request.getRecipientId()));
+                .orElseThrow(
+                        () -> new ResourceNotFoundException("Recipient user not found: " + request.getRecipientId()));
 
         HandoverRecord record = HandoverRecord.builder()
                 .foundItem(foundItem)
@@ -61,8 +65,10 @@ public class HandoverService {
         record = handoverRecordRepository.save(record);
 
         foundItem.setCustodyStatus(CustodyStatus.RETURNED);
-        caseService.findAndTransition(foundItem, CaseStatus.RETURNED, officer, "Item physically handed over to recipient");
-        caseService.findAndTransition(foundItem, CaseStatus.RESOLVED, officer, "Case resolved after successful handover");
+        caseService.findAndTransition(foundItem, CaseStatus.RETURNED, officer,
+                "Item physically handed over to recipient");
+        caseService.findAndTransition(foundItem, CaseStatus.RESOLVED, officer,
+                "Case resolved after successful handover");
         if (foundItem.getFoundReport() != null) {
             foundItem.getFoundReport().setStatus(FoundReportStatus.RETURNED);
             foundReportRepository.save(foundItem.getFoundReport());
@@ -70,8 +76,10 @@ public class HandoverService {
 
         if (claim.getLostItem() != null) {
             claim.getLostItem().setStatus(LostItemStatus.RESOLVED);
-            caseService.findAndTransition(claim.getLostItem(), CaseStatus.RETURNED, officer, "Item physically handed over to recipient");
-            caseService.findAndTransition(claim.getLostItem(), CaseStatus.RESOLVED, officer, "Case resolved after successful handover");
+            caseService.findAndTransition(claim.getLostItem(), CaseStatus.RETURNED, officer,
+                    "Item physically handed over to recipient");
+            caseService.findAndTransition(claim.getLostItem(), CaseStatus.RESOLVED, officer,
+                    "Case resolved after successful handover");
         }
 
         rejectRemainingClaims(foundItem, claim, officer);
@@ -79,7 +87,8 @@ public class HandoverService {
         notificationService.notify(recipient, NotificationType.ITEM_RECOVERED,
                 "Item handover completed",
                 "Your item has been physically returned to you. Reference: " +
-                        (request.getAcknowledgementReference() != null ? request.getAcknowledgementReference() : record.getHandoverId()),
+                        (request.getAcknowledgementReference() != null ? request.getAcknowledgementReference()
+                                : record.getHandoverId()),
                 null, null);
 
         auditService.log(officer, "ITEM_HANDED_OVER", "HandoverRecord", record.getHandoverId());
@@ -95,8 +104,10 @@ public class HandoverService {
 
     private void rejectRemainingClaims(FoundItem foundItem, Claim approvedClaim, User officer) {
         claimRepository.findByFoundItem_FoundItemIdOrderByCreatedAtDesc(foundItem.getFoundItemId()).forEach(other -> {
-            if (other.getClaimId().equals(approvedClaim.getClaimId())) return;
-            if (other.getStatus() == ClaimStatus.PENDING || other.getStatus() == ClaimStatus.UNDER_VERIFICATION || other.getStatus() == ClaimStatus.DISPUTED) {
+            if (other.getClaimId().equals(approvedClaim.getClaimId()))
+                return;
+            if (other.getStatus() == ClaimStatus.PENDING || other.getStatus() == ClaimStatus.UNDER_VERIFICATION
+                    || other.getStatus() == ClaimStatus.DISPUTED) {
                 other.setStatus(ClaimStatus.REJECTED);
                 claimRepository.save(other);
                 notificationService.notify(other.getClaimant(), NotificationType.CLAIM_UPDATE,

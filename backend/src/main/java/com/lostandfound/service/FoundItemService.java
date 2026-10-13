@@ -1,5 +1,6 @@
 package com.lostandfound.service;
 
+import com.lostandfound.security.StationAccess;
 import com.lostandfound.dto.file.PhotoUploadResponse;
 import com.lostandfound.dto.founditem.*;
 import com.lostandfound.dto.verification.VerificationResponse;
@@ -48,7 +49,8 @@ public class FoundItemService {
     @Transactional
     public FoundItemIntakeResponse intake(User officer, FoundItemIntakeRequest request) {
         PoliceStation station = stationRepository.findById(request.getStationId())
-                .orElseThrow(() -> new ResourceNotFoundException("Police station not found: " + request.getStationId()));
+                .orElseThrow(
+                        () -> new ResourceNotFoundException("Police station not found: " + request.getStationId()));
         if (officer.getStation() == null || !officer.getStation().getStationId().equals(station.getStationId())) {
             throw new ForbiddenException("You can only intake items at your assigned police station");
         }
@@ -59,7 +61,8 @@ public class FoundItemService {
         FoundReport linkedReport = null;
         if (request.getFoundReportId() != null) {
             linkedReport = foundReportRepository.findById(request.getFoundReportId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Found report not found: " + request.getFoundReportId()));
+                    .orElseThrow(() -> new ResourceNotFoundException(
+                            "Found report not found: " + request.getFoundReportId()));
             if (foundItemRepository.findByFoundReport_FoundReportId(linkedReport.getFoundReportId()).isPresent()) {
                 throw new BadRequestException("This found report has already been linked to an official found item");
             }
@@ -91,7 +94,8 @@ public class FoundItemService {
             linkedReport.setStatus(FoundReportStatus.LINKED);
             foundReportRepository.save(linkedReport);
 
-            List<ItemPhoto> reportPhotos = itemPhotoRepository.findByFoundReport_FoundReportId(linkedReport.getFoundReportId());
+            List<ItemPhoto> reportPhotos = itemPhotoRepository
+                    .findByFoundReport_FoundReportId(linkedReport.getFoundReportId());
             for (ItemPhoto reportPhoto : reportPhotos) {
                 ItemPhoto carriedOver = ItemPhoto.builder()
                         .foundItem(foundItem)
@@ -117,8 +121,10 @@ public class FoundItemService {
     @Transactional
     public VerificationResponse verify(UUID foundItemId, User officer, VerifyFoundItemRequest request) {
         FoundItem foundItem = getEntityById(foundItemId);
+        StationAccess.assertOwnStation(officer, foundItem.getStation());
         if (foundItem.getVerificationStatus() != FoundItemVerificationStatus.PENDING) {
-            throw new BadRequestException("This found item has already been reviewed (" + foundItem.getVerificationStatus() + ")");
+            throw new BadRequestException(
+                    "This found item has already been reviewed (" + foundItem.getVerificationStatus() + ")");
         }
         VerificationDecision decision;
         try {
@@ -140,13 +146,15 @@ public class FoundItemService {
             foundItem.setVerificationStatus(FoundItemVerificationStatus.VERIFIED);
             foundItemRepository.save(foundItem);
             caseService.findAndTransition(foundItem, CaseStatus.POLICE_VERIFIED, officer,
-                    "Found item verified by police: " + (request.getVerificationNotes() != null ? request.getVerificationNotes() : ""));
+                    "Found item verified by police: "
+                            + (request.getVerificationNotes() != null ? request.getVerificationNotes() : ""));
             matchingService.generateForFoundItem(foundItem);
         } else {
             foundItem.setVerificationStatus(FoundItemVerificationStatus.REJECTED);
             foundItemRepository.save(foundItem);
             caseService.findAndTransition(foundItem, CaseStatus.REJECTED, officer,
-                    "Found item verification rejected: " + (request.getVerificationNotes() != null ? request.getVerificationNotes() : ""));
+                    "Found item verification rejected: "
+                            + (request.getVerificationNotes() != null ? request.getVerificationNotes() : ""));
         }
         auditService.log(officer, "FOUND_ITEM_VERIFICATION_DECISION", "FoundItem", foundItem.getFoundItemId());
 
@@ -162,6 +170,7 @@ public class FoundItemService {
     public FoundItemAdminDto getAdminDetail(UUID foundItemId, UserPrincipal principal) {
         assertPolice(principal);
         FoundItem item = getEntityById(foundItemId);
+        StationAccess.assertOwnStation(principal, item.getStation());
         Case linkedCase = caseRepository.findByFoundItem_FoundItemId(foundItemId).orElse(null);
         return foundItemMapper.toAdminDto(item, linkedCase);
     }
@@ -178,17 +187,20 @@ public class FoundItemService {
     @Transactional(readOnly = true)
     public List<FoundItemAdminDto> getStationInventory(UUID stationId, UserPrincipal principal) {
         assertPolice(principal);
+        StationAccess.assertOwnStation(principal, stationId);
         if ("POLICE_OFFICER".equals(principal.getRole()) && !stationId.equals(principal.getStationId())) {
             throw new ForbiddenException("Officers may only view their own station's inventory");
         }
         return foundItemRepository.findByStation_StationIdOrderByCreatedAtDesc(stationId).stream()
-                .map(item -> foundItemMapper.toAdminDto(item, caseRepository.findByFoundItem_FoundItemId(item.getFoundItemId()).orElse(null)))
+                .map(item -> foundItemMapper.toAdminDto(item,
+                        caseRepository.findByFoundItem_FoundItemId(item.getFoundItemId()).orElse(null)))
                 .collect(Collectors.toList());
     }
 
     @Transactional
     public PhotoUploadResponse uploadPhoto(UUID foundItemId, MultipartFile file, String visibility, User officer) {
         FoundItem item = getEntityById(foundItemId);
+        StationAccess.assertOwnStation(officer, item.getStation());
         PhotoVisibility photoVisibility;
         try {
             photoVisibility = visibility != null ? PhotoVisibility.valueOf(visibility) : PhotoVisibility.PUBLIC;
@@ -218,7 +230,8 @@ public class FoundItemService {
     }
 
     private void assertPolice(UserPrincipal principal) {
-        boolean isPolice = "POLICE_OFFICER".equals(principal.getRole()) || "POLICE_ADMIN".equals(principal.getRole()) || "SYSTEM_ADMIN".equals(principal.getRole());
+        boolean isPolice = "POLICE_OFFICER".equals(principal.getRole()) || "POLICE_ADMIN".equals(principal.getRole())
+                || "SYSTEM_ADMIN".equals(principal.getRole());
         if (!isPolice) {
             throw new ForbiddenException("This action is restricted to police personnel");
         }

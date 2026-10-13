@@ -13,6 +13,7 @@ import com.lostandfound.exception.ForbiddenException;
 import com.lostandfound.mapper.EvidenceMapper;
 import com.lostandfound.repository.ClaimEvidenceRepository;
 import com.lostandfound.repository.ClaimRepository;
+import com.lostandfound.security.StationAccess;
 import com.lostandfound.security.UserPrincipal;
 import com.lostandfound.util.FileStorageService;
 import lombok.RequiredArgsConstructor;
@@ -42,7 +43,8 @@ public class EvidenceService {
     @Transactional
     public EvidenceDto addEvidence(UUID claimId, User claimant, EvidenceCreateRequest request, MultipartFile file) {
         Claim claim = claimRepository.findById(claimId)
-                .orElseThrow(() -> new com.lostandfound.exception.ResourceNotFoundException("Claim not found: " + claimId));
+                .orElseThrow(
+                        () -> new com.lostandfound.exception.ResourceNotFoundException("Claim not found: " + claimId));
         if (!claim.getClaimant().getUserId().equals(claimant.getUserId())) {
             throw new ForbiddenException("You can only add evidence to your own claim");
         }
@@ -73,9 +75,11 @@ public class EvidenceService {
         if (claim.getStatus() == ClaimStatus.PENDING) {
             claim.setStatus(ClaimStatus.UNDER_VERIFICATION);
             claimRepository.save(claim);
-            caseService.findAndTransition(claim.getFoundItem(), CaseStatus.UNDER_VERIFICATION, claimant, "Evidence submitted for review");
+            caseService.findAndTransition(claim.getFoundItem(), CaseStatus.UNDER_VERIFICATION, claimant,
+                    "Evidence submitted for review");
             if (claim.getLostItem() != null) {
-                caseService.findAndTransition(claim.getLostItem(), CaseStatus.UNDER_VERIFICATION, claimant, "Evidence submitted for review");
+                caseService.findAndTransition(claim.getLostItem(), CaseStatus.UNDER_VERIFICATION, claimant,
+                        "Evidence submitted for review");
             }
         }
 
@@ -86,11 +90,16 @@ public class EvidenceService {
     @Transactional(readOnly = true)
     public List<EvidenceDto> getEvidence(UUID claimId, UserPrincipal principal) {
         Claim claim = claimRepository.findById(claimId)
-                .orElseThrow(() -> new com.lostandfound.exception.ResourceNotFoundException("Claim not found: " + claimId));
+                .orElseThrow(
+                        () -> new com.lostandfound.exception.ResourceNotFoundException("Claim not found: " + claimId));
         boolean isClaimant = claim.getClaimant().getUserId().equals(principal.getUserId());
-        boolean isPolice = "POLICE_OFFICER".equals(principal.getRole()) || "POLICE_ADMIN".equals(principal.getRole()) || "SYSTEM_ADMIN".equals(principal.getRole());
+        boolean isPolice = "POLICE_OFFICER".equals(principal.getRole()) || "POLICE_ADMIN".equals(principal.getRole())
+                || "SYSTEM_ADMIN".equals(principal.getRole());
         if (!isClaimant && !isPolice) {
             throw new ForbiddenException("You do not have permission to view this evidence");
+        }
+        if (!isClaimant) {
+            StationAccess.assertOwnStation(principal, claim.getFoundItem().getStation());
         }
         return evidenceMapper.toDtoList(evidenceRepository.findByClaim_ClaimIdOrderByCreatedAtAsc(claimId));
     }

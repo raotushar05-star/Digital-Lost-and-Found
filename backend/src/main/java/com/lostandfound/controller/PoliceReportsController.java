@@ -1,5 +1,7 @@
 package com.lostandfound.controller;
 
+import com.lostandfound.security.StationAccess;
+import com.lostandfound.security.UserPrincipal;
 import com.lostandfound.dto.casedto.CaseFileDto;
 import com.lostandfound.dto.reports.ReportsSummaryDto;
 import com.lostandfound.dto.reports.StationReportDto;
@@ -36,7 +38,14 @@ public class PoliceReportsController {
             @RequestParam(required = false) UUID stationId,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateFrom,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateTo) {
-        return reportsService.getSummary(stationId, dateFrom, dateTo);
+        UserPrincipal principal = SecurityUtils.getCurrentPrincipal();
+        UUID scope = StationAccess.scopeFor(principal);
+        if (scope == null) {
+            scope = stationId;                       // system admin may pick any station
+        } else if (stationId != null) {
+            StationAccess.assertOwnStation(principal, stationId);
+        }
+        return reportsService.getSummary(scope, dateFrom, dateTo);
     }
 
     @GetMapping("/stations")
@@ -44,7 +53,8 @@ public class PoliceReportsController {
     public List<StationReportDto> getStationReports(
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateFrom,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateTo) {
-        return reportsService.getStationReports(dateFrom, dateTo);
+        UUID scope = StationAccess.scopeFor(SecurityUtils.getCurrentPrincipal());
+        return reportsService.getStationReports(scope, dateFrom, dateTo);
     }
 
     @GetMapping("/case-files")

@@ -18,6 +18,7 @@ import com.lostandfound.mapper.ClaimMapper;
 import com.lostandfound.repository.ClaimRepository;
 import com.lostandfound.repository.FoundItemRepository;
 import com.lostandfound.repository.LostItemRepository;
+import com.lostandfound.security.StationAccess;
 import com.lostandfound.security.UserPrincipal;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -53,16 +54,18 @@ public class ClaimService {
         boolean hasActiveClaim = claimRepository.findByFoundItem_FoundItemIdOrderByCreatedAtDesc(foundItemId).stream()
                 .anyMatch(c -> c.getClaimant().getUserId().equals(claimant.getUserId())
                         && (c.getStatus() == ClaimStatus.PENDING
-                            || c.getStatus() == ClaimStatus.UNDER_VERIFICATION
-                            || c.getStatus() == ClaimStatus.DISPUTED));
+                                || c.getStatus() == ClaimStatus.UNDER_VERIFICATION
+                                || c.getStatus() == ClaimStatus.DISPUTED));
         if (hasActiveClaim) {
-            throw new ConflictException("You already have an active claim on this item. Wait for it to be resolved before submitting another.");
+            throw new ConflictException(
+                    "You already have an active claim on this item. Wait for it to be resolved before submitting another.");
         }
 
         LostItem lostItem = null;
         if (request.getLostItemId() != null) {
             lostItem = lostItemRepository.findById(request.getLostItemId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Lost item not found: " + request.getLostItemId()));
+                    .orElseThrow(
+                            () -> new ResourceNotFoundException("Lost item not found: " + request.getLostItemId()));
             if (!lostItem.getOwner().getUserId().equals(claimant.getUserId())) {
                 throw new ForbiddenException("You can only reference your own lost-item reports in a claim");
             }
@@ -115,6 +118,9 @@ public class ClaimService {
     @Transactional(readOnly = true)
     public List<ClaimSummaryDto> getClaimsForFoundItem(UUID foundItemId, UserPrincipal principal) {
         assertPolice(principal);
+        FoundItem foundItem = foundItemRepository.findById(foundItemId)
+                .orElseThrow(() -> new ResourceNotFoundException("Found item not found: " + foundItemId));
+        StationAccess.assertOwnStation(principal, foundItem.getStation());
         return claimRepository.findByFoundItem_FoundItemIdOrderByCreatedAtDesc(foundItemId).stream()
                 .map(claimMapper::toSummaryDto)
                 .collect(Collectors.toList());
@@ -126,15 +132,19 @@ public class ClaimService {
     }
 
     public void assertCanView(Claim claim, UserPrincipal principal) {
-        boolean isClaimant = claim.getClaimant().getUserId().equals(principal.getUserId());
-        boolean isPolice = "POLICE_OFFICER".equals(principal.getRole()) || "POLICE_ADMIN".equals(principal.getRole()) || "SYSTEM_ADMIN".equals(principal.getRole());
-        if (!isClaimant && !isPolice) {
+        if (claim.getClaimant().getUserId().equals(principal.getUserId()))
+            return;
+        boolean isPolice = "POLICE_OFFICER".equals(principal.getRole()) || "POLICE_ADMIN".equals(principal.getRole())
+                || "SYSTEM_ADMIN".equals(principal.getRole());
+        if (!isPolice) {
             throw new ForbiddenException("You do not have permission to view this claim");
         }
+        StationAccess.assertOwnStation(principal, claim.getFoundItem().getStation());
     }
 
     private void assertPolice(UserPrincipal principal) {
-        boolean isPolice = "POLICE_OFFICER".equals(principal.getRole()) || "POLICE_ADMIN".equals(principal.getRole()) || "SYSTEM_ADMIN".equals(principal.getRole());
+        boolean isPolice = "POLICE_OFFICER".equals(principal.getRole()) || "POLICE_ADMIN".equals(principal.getRole())
+                || "SYSTEM_ADMIN".equals(principal.getRole());
         if (!isPolice) {
             throw new ForbiddenException("This action is restricted to police personnel");
         }

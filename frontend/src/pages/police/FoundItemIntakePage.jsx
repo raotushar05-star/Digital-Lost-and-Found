@@ -38,8 +38,8 @@ export default function FoundItemIntakePage() {
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    categoryService.getCategories().then(setCategories).catch(() => {});
-    stationService.getStations().then(setStations).catch(() => {});
+    categoryService.getCategories().then(setCategories).catch(() => { });
+    stationService.getStations().then(setStations).catch(() => { });
     policeService.getSubmittedFoundReports()
       .then(setPendingReports)
       .catch((err) => setReportLoadError(extractErrorMessage(err)));
@@ -178,12 +178,10 @@ export default function FoundItemIntakePage() {
         <div className="row g-2 mb-3">
           <div className="col-md-6">
             <label className="form-label">Station</label>
-            <select className="form-select" required value={form.stationId} onChange={update("stationId")}>
-              <option value="">Select station…</option>
-              {stations.map((s) => (
-                <option key={s.stationId} value={s.stationId}>
-                  {s.stationName}
-                </option>
+            <select className="form-select" value={form.stationId} disabled>
+              <option value="">Loading…</option>
+              {stations.filter((s) => s.stationId === profile?.stationId).map((s) => (
+                <option key={s.stationId} value={s.stationId}>{s.stationName}</option>
               ))}
             </select>
           </div>
