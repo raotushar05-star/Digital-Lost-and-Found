@@ -22,6 +22,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
+import com.lostandfound.exception.BadRequestException;
+import com.lostandfound.util.IdentityNormalizer;
+import org.springframework.dao.DataIntegrityViolationException;
 
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -59,21 +62,31 @@ public class UserService {
         return userMapper.toProfileDto(getEntityById(userId));
     }
 
-    @Transactional
+        @Transactional
     public UserProfileDto updateProfile(UUID userId, UpdateProfileRequest request) {
         User user = getEntityById(userId);
-        if (StringUtils.hasText(request.getEmail()) && !request.getEmail().equalsIgnoreCase(user.getEmail())
-                && userRepository.existsByEmail(request.getEmail())) {
+        String email = IdentityNormalizer.email(request.getEmail());
+        String phone = IdentityNormalizer.phone(request.getPhone());
+
+        if (!IdentityNormalizer.isValidPhone(phone)) {
+            throw new BadRequestException("Phone number is invalid");
+        }
+        if (email != null && !email.equalsIgnoreCase(user.getEmail())
+                && userRepository.existsByEmailIgnoreCase(email)) {
             throw new ConflictException("An account with this email already exists");
         }
-        if (!request.getPhone().equals(user.getPhone()) && userRepository.existsByPhone(request.getPhone())) {
+        if (!phone.equals(user.getPhone()) && userRepository.existsByPhone(phone)) {
             throw new ConflictException("An account with this phone number already exists");
         }
-        user.setName(request.getName());
-        user.setEmail(request.getEmail());
-        user.setPhone(request.getPhone());
+        user.setName(request.getName().trim());
+        user.setEmail(email);          // null, not "", when the field is left blank
+        user.setPhone(phone);
         user.setAddress(request.getAddress());
-        return userMapper.toProfileDto(userRepository.save(user));
+        try {
+            return userMapper.toProfileDto(userRepository.saveAndFlush(user));
+        } catch (DataIntegrityViolationException ex) {
+            throw new ConflictException("An account with this email or phone number already exists");
+        }
     }
 
     @Transactional(readOnly = true)

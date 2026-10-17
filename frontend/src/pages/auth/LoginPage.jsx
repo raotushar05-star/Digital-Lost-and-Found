@@ -1,17 +1,49 @@
 import React, { useState } from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext.jsx";
 import ErrorAlert from "../../components/common/ErrorAlert.jsx";
 import { extractErrorMessage } from "../../services/apiClient";
+
+const SIGNIN_OPTIONS = {
+  citizen: {
+    label: "Citizen",
+    heading: "Citizen sign in",
+    roles: ["USER"],
+    home: "/dashboard"
+  },
+  police: {
+    label: "Police Officer",
+    heading: "Police officer sign in",
+    roles: ["POLICE_OFFICER"],
+    home: "/police/dashboard"
+  },
+  admin: {
+    label: "Admin",
+    heading: "Admin sign in",
+    roles: ["POLICE_ADMIN", "SYSTEM_ADMIN"],
+    home: null // decided by role below
+  }
+};
 
 export default function LoginPage() {
   const { login } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initial = SIGNIN_OPTIONS[searchParams.get("role")] ? searchParams.get("role") : "citizen";
+  const [mode, setMode] = useState(initial);
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState(null);
   const [submitting, setSubmitting] = useState(false);
+
+  const option = SIGNIN_OPTIONS[mode];
+
+  const switchMode = (key) => {
+    setMode(key);
+    setError(null);
+    setSearchParams({ role: key }, { replace: true });
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -19,19 +51,26 @@ export default function LoginPage() {
     setSubmitting(true);
     try {
       const isEmail = identifier.includes("@");
-      const user = await login(isEmail ? { email: identifier, password } : { phone: identifier, password });
+      const user = await login(
+        isEmail ? { email: identifier, password } : { phone: identifier, password },
+        option.roles
+      );
       const dest = location.state?.from?.pathname;
       if (dest) {
         navigate(dest);
       } else if (user.role === "SYSTEM_ADMIN") {
         navigate("/admin/stations");
-      } else if (user.role === "POLICE_OFFICER" || user.role === "POLICE_ADMIN") {
+      } else if (user.role === "POLICE_ADMIN" || user.role === "POLICE_OFFICER") {
         navigate("/police/dashboard");
       } else {
         navigate("/dashboard");
       }
     } catch (err) {
-      setError(extractErrorMessage(err));
+      setError(
+        err.roleMismatch
+          ? `This account is not a ${option.label} account. Please choose the correct sign-in option above.`
+          : extractErrorMessage(err)
+      );
     } finally {
       setSubmitting(false);
     }
@@ -39,11 +78,27 @@ export default function LoginPage() {
 
   return (
     <div className="d-flex align-items-center justify-content-center" style={{ minHeight: "100vh" }}>
-      <div className="card p-4" style={{ width: 400 }}>
+      <div className="card p-4" style={{ width: 440 }}>
         <div className="page-eyebrow mb-1">Sign in</div>
-        <h1 style={{ fontSize: "1.5rem" }} className="mb-3">
-          Welcome back
-        </h1>
+        <h1 style={{ fontSize: "1.5rem" }} className="mb-3">{option.heading}</h1>
+
+        <ul className="nav nav-pills nav-fill mb-3" role="tablist">
+          {Object.entries(SIGNIN_OPTIONS).map(([key, opt]) => (
+            <li className="nav-item" key={key}>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={mode === key}
+                className={`nav-link ${mode === key ? "active" : ""}`}
+                style={{ fontSize: "0.85rem" }}
+                onClick={() => switchMode(key)}
+              >
+                {opt.label}
+              </button>
+            </li>
+          ))}
+        </ul>
+
         <form onSubmit={handleSubmit}>
           <ErrorAlert message={error} />
           <div className="mb-3">
@@ -67,12 +122,22 @@ export default function LoginPage() {
             />
           </div>
           <button className="btn btn-primary w-100" disabled={submitting}>
-            {submitting ? "Signing in…" : "Sign in"}
+            {submitting ? "Signing in…" : `Sign in as ${option.label}`}
           </button>
-          <p className="text-center text-muted-soft mt-3 mb-0" style={{ fontSize: "0.85rem" }}>
-            New here? <Link to="/register">Create an account</Link>
-          </p>
         </form>
+
+        <div className="hairline-top mt-3 pt-3 text-center text-muted-soft" style={{ fontSize: "0.85rem" }}>
+          {mode === "citizen" ? (
+            <>
+              New here?{" "}
+              <Link to="/register" className="btn btn-sm btn-outline-primary ms-1">
+                Create account
+              </Link>
+            </>
+          ) : (
+            <>Police and admin accounts are issued by the System Administrator and can't be self-registered.</>
+          )}
+        </div>
       </div>
     </div>
   );

@@ -109,7 +109,7 @@ export default function SearchPage() {
       {loading ? (
         <LoadingSpinner />
       ) : !results || results.content.length === 0 ? (
-        <EmptyState title="No matching items" message="Try widening your filters or checking back later." />
+        <EmptyState title="No matching items" message="Only verified items still in police custody appear here. Items already returned to their owners are hidden. Try fewer filters." />
       ) : (
         <>
           <div className="row g-3">

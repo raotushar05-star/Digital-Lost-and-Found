@@ -9,7 +9,11 @@ import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import lombok.*;
 
-@Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
 public class StationCreateRequest {
 
     @NotBlank(message = "Station name is required")
@@ -28,19 +32,19 @@ public class StationCreateRequest {
     @Valid
     private LocationDto location;
 
-    @NotBlank(message = "Police admin name is required")
+    @NotBlank(message = "Officer name is required")
     @Size(max = 100)
-    private String adminName;
+    private String officerName;
 
-    @NotBlank(message = "Police admin email is required")
-    @Email(message = "Police admin email must be valid")
-    private String adminEmail;
+    @NotBlank(message = "Officer email is required")
+    @Email(message = "Officer email must be valid")
+    private String officerEmail;
 
-    @NotBlank(message = "Police admin phone is required")
-    @Pattern(regexp = "^[0-9+][0-9 -]{6,14}$", message = "Police admin phone is invalid")
-    private String adminPhone;
+    @NotBlank(message = "Officer phone is required")
+    @Pattern(regexp = "^[0-9+][0-9 -]{6,14}$", message = "Officer phone is invalid")
+    private String officerPhone;
 
-    @NotBlank(message = "Police admin password is required")
-    @Size(min = 8, message = "Police admin password must be at least 8 characters")
-    private String adminPassword;
+    @NotBlank(message = "Officer password is required")
+    @Size(min = 8, message = "Officer password must be at least 8 characters")
+    private String officerPassword;
 }

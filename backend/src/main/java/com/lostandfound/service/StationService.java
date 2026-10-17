@@ -14,6 +14,9 @@ import com.lostandfound.exception.ResourceNotFoundException;
 import com.lostandfound.mapper.StationMapper;
 import com.lostandfound.repository.PoliceStationRepository;
 import com.lostandfound.repository.UserRepository;
+import com.lostandfound.util.IdentityNormalizer;
+import com.lostandfound.exception.BadRequestException;
+
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -50,20 +53,25 @@ public class StationService {
     }
 
     /**
-     * Creates a station and a POLICE_ADMIN login bound to it.
-     * Safe for demos: only SYSTEM_ADMIN can call this; public registration stays USER-only.
+     * Creates a station and a POLICE_OFFICER login bound to it. Only SYSTEM_ADMIN
+     * can call this.
+     * One transaction: if any step fails, nothing is saved.
      */
     @Transactional
     public StationCreateResponse create(StationCreateRequest request) {
-        String adminEmail = request.getAdminEmail().trim().toLowerCase();
+        String officerEmail = IdentityNormalizer.email(request.getOfficerEmail());
+        String officerPhone = IdentityNormalizer.phone(request.getOfficerPhone());
+        if (!IdentityNormalizer.isValidPhone(officerPhone)) {
+            throw new BadRequestException("Officer phone is invalid");
+        }
         if (stationRepository.existsByStationCode(request.getStationCode())) {
             throw new ConflictException("A station with this code already exists");
         }
-        if (userRepository.existsByEmail(adminEmail)) {
-            throw new ConflictException("An account with this police admin email already exists");
+        if (userRepository.existsByEmailIgnoreCase(officerEmail)) {
+            throw new ConflictException("An account with this officer email already exists");
         }
-        if (userRepository.existsByPhone(request.getAdminPhone())) {
-            throw new ConflictException("An account with this police admin phone already exists");
+        if (userRepository.existsByPhone(officerPhone)) {
+            throw new ConflictException("An account with this officer phone already exists");
         }
 
         Location location = locationService.createFromDto(request.getLocation());
@@ -76,28 +84,26 @@ public class StationService {
                 .isActive(true)
                 .build());
 
-        User policeAdmin = userRepository.save(User.builder()
-                .name(request.getAdminName())
-                .email(adminEmail)
-                .phone(request.getAdminPhone())
-                .passwordHash(passwordEncoder.encode(request.getAdminPassword()))
-                .role(Role.POLICE_ADMIN)
+        User officer = userRepository.save(User.builder()
+                .name(request.getOfficerName())
+                .email(officerEmail)
+                .phone(request.getOfficerPhone())
+                .passwordHash(passwordEncoder.encode(request.getOfficerPassword()))
+                .role(Role.POLICE_OFFICER)
                 .station(station)
                 .isActive(true)
                 .build());
-        auditService.log(policeAdmin, "STATION_ADMIN_PROVISIONED", "PoliceStation", station.getStationId());
-
-        StationAdminCredentialsDto credentials = StationAdminCredentialsDto.builder()
-                .name(policeAdmin.getName())
-                .email(policeAdmin.getEmail())
-                .phone(policeAdmin.getPhone())
-                .role(policeAdmin.getRole().name())
-                .build();
+        auditService.log(officer, "STATION_OFFICER_PROVISIONED", "PoliceStation", station.getStationId());
 
         return StationCreateResponse.builder()
                 .station(stationMapper.toDto(station))
-                .policeAdmin(credentials)
-                .message("Station created. Sign in with the police admin email and the password you set.")
+                .policeOfficer(StationAdminCredentialsDto.builder()
+                        .name(officer.getName())
+                        .email(officer.getEmail())
+                        .phone(officer.getPhone())
+                        .role(officer.getRole().name())
+                        .build())
+                .message("Station created with an officer login.")
                 .build();
     }
 

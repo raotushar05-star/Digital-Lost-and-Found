@@ -1,5 +1,7 @@
 package com.lostandfound.config;
 
+import lombok.extern.slf4j.Slf4j;
+import java.util.Optional;
 import com.lostandfound.entity.Location;
 import com.lostandfound.entity.PoliceStation;
 import com.lostandfound.entity.User;
@@ -22,6 +24,7 @@ import java.math.BigDecimal;
  * Flyway (V2 Bengaluru + V7 Mangaluru); this seeder also creates PS-MGL-001
  * if it is missing so the UI and code stay usable after first boot.
  */
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class DataSeeder implements CommandLineRunner {
@@ -63,6 +66,9 @@ public class DataSeeder implements CommandLineRunner {
 
         ensurePoliceUser(STATION_ADMIN_EMAIL, "Station Admin", "9999999998", Role.POLICE_ADMIN, demoStation);
         ensurePoliceUser(OFFICER_EMAIL, "Duty Officer", "9999999997", Role.POLICE_OFFICER, demoStation);
+                stationRepository.findByStationCode("PS-BLR-001").ifPresent(cubbon ->
+                ensurePoliceUser("cubbon.officer@lostandfound.local", "Cubbon Duty Officer",
+                        "9999999994", Role.POLICE_OFFICER, cubbon));
     }
 
     private PoliceStation ensureMangaluruStation() {
@@ -86,15 +92,22 @@ public class DataSeeder implements CommandLineRunner {
                     .build());
         });
     }
-
     private void ensurePoliceUser(String email, String name, String phone, Role role, PoliceStation station) {
-        userRepository.findByEmail(email).ifPresentOrElse(existing -> {
-            if (existing.getStation() == null
-                    || !station.getStationId().equals(existing.getStation().getStationId())) {
-                existing.setStation(station);
-                userRepository.save(existing);
+        Optional<User> existing = userRepository.findByEmail(email);
+        if (existing.isPresent()) {
+            User user = existing.get();
+            if (user.getStation() == null
+                    || !station.getStationId().equals(user.getStation().getStationId())) {
+                user.setStation(station);
+                userRepository.save(user);
             }
-        }, () -> userRepository.save(User.builder()
+            return;
+        }
+        if (userRepository.existsByPhone(phone)) {
+            log.warn("Skipping seed user {}: phone {} is already used by another account", email, phone);
+            return;
+        }
+        userRepository.save(User.builder()
                 .name(name)
                 .email(email)
                 .phone(phone)
@@ -102,6 +115,6 @@ public class DataSeeder implements CommandLineRunner {
                 .role(role)
                 .station(station)
                 .isActive(true)
-                .build()));
+                .build());
     }
 }

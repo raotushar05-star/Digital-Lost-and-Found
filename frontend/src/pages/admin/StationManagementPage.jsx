@@ -13,10 +13,10 @@ const emptyForm = {
   address: "",
   phone: "",
   location: { city: "Mangaluru" },
-  adminName: "",
-  adminEmail: "",
-  adminPhone: "",
-  adminPassword: ""
+  officerName: "",
+  officerEmail: "",
+  officerPhone: "",
+  officerPassword: ""
 };
 
 export default function StationManagementPage() {
@@ -39,16 +39,13 @@ export default function StationManagementPage() {
     setEditingId(station.stationId);
     setSuccess(null);
     setForm({
+      ...emptyForm,
       stationName: station.stationName,
       stationCode: station.stationCode,
       address: station.address,
       phone: station.phone || "",
       location: station.location || { city: "" },
-      isActive: station.isActive,
-      adminName: "",
-      adminEmail: "",
-      adminPhone: "",
-      adminPassword: ""
+      isActive: station.isActive
     });
   };
 
@@ -72,14 +69,13 @@ export default function StationManagementPage() {
           isActive: form.isActive
         });
         setSuccess("Station updated.");
-        resetForm();
       } else {
         const result = await stationService.create(form);
         setSuccess(
-          `${result.message || "Station created."} Sign in as ${result.policeAdmin?.email} with the password you just set.`
+          `Station created. The officer signs in as ${result.policeOfficer?.email} with the password you set.`
         );
-        resetForm();
       }
+      resetForm();
       load();
     } catch (err) {
       setError(extractErrorMessage(err));
@@ -93,7 +89,7 @@ export default function StationManagementPage() {
       <PageHeader
         eyebrow="Admin"
         title="Police stations"
-        subtitle="Creating a station also provisions a police admin login for that station. Lost reports are assigned to the nearest station with a map pin."
+        subtitle="Creating a station also creates its Station Officer login. Lost reports are assigned to the nearest station with a map pin."
       />
       <div className="row g-4">
         <div className="col-lg-7">
@@ -119,8 +115,8 @@ export default function StationManagementPage() {
           )}
         </div>
         <div className="col-lg-5">
-          <form onSubmit={handleSubmit} className="card p-3">
-            <h2 style={{ fontSize: "1rem" }} className="mb-2">{editingId ? "Edit station" : "New station + login"}</h2>
+          <form onSubmit={handleSubmit} className="card p-3" autoComplete="off">
+            <h2 style={{ fontSize: "1rem" }} className="mb-2">{editingId ? "Edit station" : "New station"}</h2>
             <ErrorAlert message={error} />
             {success && <div className="alert alert-success py-2" style={{ fontSize: "0.85rem" }}>{success}</div>}
             <div className="mb-2">
@@ -168,54 +164,57 @@ export default function StationManagementPage() {
               />
               <LocationPicker value={form.location} onChange={(loc) => setForm({ ...form, location: loc })} height={220} />
             </div>
+
             {!editingId && (
               <div className="border-top pt-3 mb-3">
-                <h3 style={{ fontSize: "0.95rem" }} className="mb-2">Police admin sign-in</h3>
+                <h3 style={{ fontSize: "0.95rem" }} className="mb-1">Station Officer login</h3>
                 <p className="text-muted-soft mb-2" style={{ fontSize: "0.8rem" }}>
-                  Only you (System Admin) can create this login. Public registration cannot become police.
+                  The officer signs in with this email and password to handle reports, verification, claims and handovers.
                 </p>
                 <div className="mb-2">
-                  <label className="form-label">Admin name</label>
+                  <label className="form-label">Name</label>
                   <input
                     className="form-control"
                     required
-                    value={form.adminName}
-                    onChange={(e) => setForm({ ...form, adminName: e.target.value })}
+                    value={form.officerName}
+                    onChange={(e) => setForm({ ...form, officerName: e.target.value })}
                   />
                 </div>
                 <div className="mb-2">
-                  <label className="form-label">Admin email</label>
+                  <label className="form-label">Email</label>
                   <input
                     type="email"
                     className="form-control"
                     required
-                    placeholder="barke.admin@example.com"
-                    value={form.adminEmail}
-                    onChange={(e) => setForm({ ...form, adminEmail: e.target.value })}
+                    autoComplete="off"
+                    value={form.officerEmail}
+                    onChange={(e) => setForm({ ...form, officerEmail: e.target.value })}
                   />
                 </div>
                 <div className="mb-2">
-                  <label className="form-label">Admin phone</label>
+                  <label className="form-label">Phone</label>
                   <input
                     className="form-control"
                     required
-                    value={form.adminPhone}
-                    onChange={(e) => setForm({ ...form, adminPhone: e.target.value })}
+                    value={form.officerPhone}
+                    onChange={(e) => setForm({ ...form, officerPhone: e.target.value })}
                   />
                 </div>
                 <div className="mb-2">
-                  <label className="form-label">Admin password</label>
+                  <label className="form-label">Password (min 8 characters)</label>
                   <input
                     type="password"
                     className="form-control"
                     required
                     minLength={8}
-                    value={form.adminPassword}
-                    onChange={(e) => setForm({ ...form, adminPassword: e.target.value })}
+                    autoComplete="new-password"
+                    value={form.officerPassword}
+                    onChange={(e) => setForm({ ...form, officerPassword: e.target.value })}
                   />
                 </div>
               </div>
             )}
+
             {editingId && (
               <div className="form-check mb-3">
                 <input

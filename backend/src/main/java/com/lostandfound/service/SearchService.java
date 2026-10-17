@@ -41,7 +41,7 @@ public class SearchService {
                 FoundItemSpecifications.foundDateTo(dateTo),
                 FoundItemSpecifications.hasColor(color),
                 FoundItemSpecifications.hasBrand(brand),
-                FoundItemSpecifications.descriptionContains(keyword)
+                                FoundItemSpecifications.keywordMatches(keyword)
         );
 
         List<FoundItem> candidates = foundItemRepository.findAll(spec);

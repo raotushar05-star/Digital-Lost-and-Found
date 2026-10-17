@@ -40,7 +40,7 @@ export default function AppLayout({ children }) {
   const isSystemAdmin = user?.role === "SYSTEM_ADMIN";
 
   useEffect(() => {
-    if (!isAuthenticated) return;
+    if (!isAuthenticated || isSystemAdmin) return;
     let active = true;
     const updateUnread = () => {
       notificationService.getMyNotifications(0, 50).then((data) => {
@@ -55,7 +55,7 @@ export default function AppLayout({ children }) {
       active = false;
       window.clearInterval(intervalId);
     };
-  }, [isAuthenticated]);
+  }, [isAuthenticated, isSystemAdmin]);
 
   const navItems = isSystemAdmin ? ADMIN_NAV : isPolice ? POLICE_NAV : USER_NAV;
   const homePath = isSystemAdmin ? "/admin/stations" : isPolice ? "/police/dashboard" : "/dashboard";
@@ -87,14 +87,16 @@ export default function AppLayout({ children }) {
             </div>
           ) : (
             <div className="d-flex align-items-center gap-3">
-              <Link to="/notifications" className="text-decoration-none text-muted position-relative">
-                Notifications
-                {unread > 0 && (
-                  <span className="badge rounded-pill ms-1" style={{ background: "var(--caution)" }}>
-                    {unread}
-                  </span>
-                )}
-              </Link>
+              {!isSystemAdmin && (
+                <Link to="/notifications" className="text-decoration-none text-muted position-relative">
+                  Notifications
+                  {unread > 0 && (
+                    <span className="badge rounded-pill ms-1" style={{ background: "var(--caution)" }}>
+                      {unread}
+                    </span>
+                  )}
+                </Link>
+              )}
 
               <div className="dropdown">
                 <button
@@ -127,27 +129,6 @@ export default function AppLayout({ children }) {
                       Profile &amp; settings
                     </button>
                   </li>
-                  {user?.role === "USER" && (
-                    <li>
-                      <button className="dropdown-item" onClick={() => navigate("/claims")}>
-                        My claims
-                      </button>
-                    </li>
-                  )}
-                  {isSystemAdmin && (
-                    <>
-                      <li>
-                        <hr className="dropdown-divider" />
-                      </li>
-                      {ADMIN_NAV.map((item) => (
-                        <li key={item.to}>
-                          <button className="dropdown-item" onClick={() => navigate(item.to)}>
-                            {item.label}
-                          </button>
-                        </li>
-                      ))}
-                    </>
-                  )}
                   <li>
                     <hr className="dropdown-divider" />
                   </li>

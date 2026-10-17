@@ -22,4 +22,6 @@ public class RegisterRequest {
     private String password;
 
     private String address;
+        /** Google ID token proving ownership of the email. Required when Google sign-up is enabled. */
+    private String googleCredential;
 }

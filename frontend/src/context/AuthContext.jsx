@@ -32,15 +32,20 @@ export function AuthProvider({ children }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const login = async (payload) => {
-    const data = await authService.login(payload);
-    localStorage.setItem("lf_token", data.accessToken);
-    localStorage.setItem("lf_user", JSON.stringify(data.user));
-    setUser(data.user);
-    const fullProfile = await userService.getProfile();
-    setProfile(fullProfile);
-    return data.user;
-  };
+  const login = async (payload, allowedRoles) => {
+  const data = await authService.login(payload);
+  if (allowedRoles && !allowedRoles.includes(data.user.role)) {
+    const err = new Error("ROLE_MISMATCH");
+    err.roleMismatch = true;
+    throw err; // nothing stored yet, so no session is created
+  }
+  localStorage.setItem("lf_token", data.accessToken);
+  localStorage.setItem("lf_user", JSON.stringify(data.user));
+  setUser(data.user);
+  const fullProfile = await userService.getProfile();
+  setProfile(fullProfile);
+  return data.user;
+};
 
   const register = async (payload) => {
     return authService.register(payload);

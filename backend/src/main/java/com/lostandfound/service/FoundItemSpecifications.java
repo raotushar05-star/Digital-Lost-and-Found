@@ -1,5 +1,8 @@
 package com.lostandfound.service;
 
+import jakarta.persistence.criteria.Predicate;
+import java.util.ArrayList;
+import java.util.List;
 import com.lostandfound.entity.FoundItem;
 import com.lostandfound.entity.enums.CustodyStatus;
 import com.lostandfound.entity.enums.FoundItemVerificationStatus;
@@ -25,19 +28,32 @@ public final class FoundItemSpecifications {
         return (root, query, cb) -> cb.equal(root.get("category").get("categoryId"), categoryId);
     }
 
-    public static Specification<FoundItem> hasColor(String color) {
+        public static Specification<FoundItem> hasColor(String color) {
         if (color == null || color.isBlank()) return null;
-        return (root, query, cb) -> cb.equal(cb.lower(root.get("color")), color.toLowerCase());
+        return (root, query, cb) -> cb.like(cb.lower(root.get("color")), "%" + color.trim().toLowerCase() + "%");
     }
 
     public static Specification<FoundItem> hasBrand(String brand) {
         if (brand == null || brand.isBlank()) return null;
-        return (root, query, cb) -> cb.equal(cb.lower(root.get("brand")), brand.toLowerCase());
+        return (root, query, cb) -> cb.like(cb.lower(root.get("brand")), "%" + brand.trim().toLowerCase() + "%");
     }
 
-    public static Specification<FoundItem> descriptionContains(String keyword) {
+    /** Every word must appear somewhere in description, brand, colour or category. */
+    public static Specification<FoundItem> keywordMatches(String keyword) {
         if (keyword == null || keyword.isBlank()) return null;
-        return (root, query, cb) -> cb.like(cb.lower(root.get("description")), "%" + keyword.toLowerCase() + "%");
+        String[] words = keyword.trim().toLowerCase().split("\\s+");
+        return (root, query, cb) -> {
+            List<Predicate> perWord = new ArrayList<>();
+            for (String word : words) {
+                String pattern = "%" + word + "%";
+                perWord.add(cb.or(
+                        cb.like(cb.lower(root.get("description")), pattern),
+                        cb.like(cb.lower(cb.coalesce(root.<String>get("brand"), "")), pattern),
+                        cb.like(cb.lower(cb.coalesce(root.<String>get("color"), "")), pattern),
+                        cb.like(cb.lower(root.get("category").<String>get("categoryName")), pattern)));
+            }
+            return cb.and(perWord.toArray(new Predicate[0]));
+        };
     }
 
     public static Specification<FoundItem> cityLike(String city) {
