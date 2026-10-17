@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate, useSearchParams } from "react-router-do
 import { useAuth } from "../../context/AuthContext.jsx";
 import ErrorAlert from "../../components/common/ErrorAlert.jsx";
 import { extractErrorMessage } from "../../services/apiClient";
+import PasswordInput from "../../components/common/PasswordInput.jsx";
 
 const SIGNIN_OPTIONS = {
   citizen: {
@@ -113,10 +114,9 @@ export default function LoginPage() {
           </div>
           <div className="mb-3">
             <label className="form-label">Password</label>
-            <input
-              type="password"
-              className="form-control"
+            <PasswordInput
               required
+              autoComplete="current-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
             />

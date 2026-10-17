@@ -8,23 +8,28 @@ import { searchService } from "../../services/searchService";
 import { categoryService } from "../../services/categoryService";
 import { formatDate } from "../../utils/format";
 
+const emptyFilters = { categoryId: "", city: "", color: "", brand: "", keyword: "" };
+
 export default function SearchPage() {
   const [categories, setCategories] = useState([]);
-  const [filters, setFilters] = useState({ categoryId: "", city: "", color: "", brand: "", keyword: "" });
+  const [filters, setFilters] = useState(emptyFilters);
+  const [applied, setApplied] = useState(emptyFilters);
+  // Results live only in this component's state, so they are gone as soon as you leave the page.
   const [results, setResults] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [notice, setNotice] = useState(null);
   const [page, setPage] = useState(0);
 
   useEffect(() => {
     categoryService.getCategories().then(setCategories).catch(() => {});
   }, []);
 
-  const runSearch = async (targetPage = 0) => {
+  const runSearch = async (targetPage, activeFilters) => {
     setLoading(true);
     try {
       const params = { page: targetPage, size: 12 };
-      Object.entries(filters).forEach(([k, v]) => {
-        if (v) params[k] = v;
+      Object.entries(activeFilters).forEach(([k, v]) => {
+        if (String(v).trim()) params[k] = String(v).trim();
       });
       const data = await searchService.search(params);
       setResults(data);
@@ -34,15 +39,20 @@ export default function SearchPage() {
     }
   };
 
-  useEffect(() => {
-    runSearch(0);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
   const handleSubmit = (e) => {
     e.preventDefault();
-    runSearch(0);
+    const hasFilter = Object.values(filters).some((v) => String(v).trim() !== "");
+    if (!hasFilter) {
+      setResults(null);
+      setNotice("Enter at least one filter to search.");
+      return;
+    }
+    setNotice(null);
+    setApplied(filters);
+    runSearch(0, filters);
   };
+
+  const set = (field) => (e) => setFilters({ ...filters, [field]: e.target.value });
 
   return (
     <AppLayout>
@@ -55,50 +65,24 @@ export default function SearchPage() {
       <form className="card p-3 mb-4" onSubmit={handleSubmit}>
         <div className="row g-2">
           <div className="col-md-3">
-            <select
-              className="form-select"
-              value={filters.categoryId}
-              onChange={(e) => setFilters({ ...filters, categoryId: e.target.value })}
-            >
+            <select className="form-select" value={filters.categoryId} onChange={set("categoryId")}>
               <option value="">All categories</option>
               {categories.map((c) => (
-                <option key={c.categoryId} value={c.categoryId}>
-                  {c.categoryName}
-                </option>
+                <option key={c.categoryId} value={c.categoryId}>{c.categoryName}</option>
               ))}
             </select>
           </div>
           <div className="col-md-2">
-            <input
-              className="form-control"
-              placeholder="City"
-              value={filters.city}
-              onChange={(e) => setFilters({ ...filters, city: e.target.value })}
-            />
+            <input className="form-control" placeholder="City" value={filters.city} onChange={set("city")} />
           </div>
           <div className="col-md-2">
-            <input
-              className="form-control"
-              placeholder="Color"
-              value={filters.color}
-              onChange={(e) => setFilters({ ...filters, color: e.target.value })}
-            />
+            <input className="form-control" placeholder="Color" value={filters.color} onChange={set("color")} />
           </div>
           <div className="col-md-2">
-            <input
-              className="form-control"
-              placeholder="Brand"
-              value={filters.brand}
-              onChange={(e) => setFilters({ ...filters, brand: e.target.value })}
-            />
+            <input className="form-control" placeholder="Brand" value={filters.brand} onChange={set("brand")} />
           </div>
           <div className="col-md-2">
-            <input
-              className="form-control"
-              placeholder="Keyword"
-              value={filters.keyword}
-              onChange={(e) => setFilters({ ...filters, keyword: e.target.value })}
-            />
+            <input className="form-control" placeholder="Keyword" value={filters.keyword} onChange={set("keyword")} />
           </div>
           <div className="col-md-1">
             <button className="btn btn-primary w-100">Go</button>
@@ -108,8 +92,16 @@ export default function SearchPage() {
 
       {loading ? (
         <LoadingSpinner />
-      ) : !results || results.content.length === 0 ? (
-        <EmptyState title="No matching items" message="Only verified items still in police custody appear here. Items already returned to their owners are hidden. Try fewer filters." />
+      ) : results === null ? (
+        <EmptyState
+          title="Search to see items"
+          message={notice || "Choose a category or type a city, colour, brand or keyword, then press Go."}
+        />
+      ) : results.content.length === 0 ? (
+        <EmptyState
+          title="No matching items"
+          message="Only verified items still in police custody appear here. Try fewer filters."
+        />
       ) : (
         <>
           <div className="row g-3">
@@ -145,11 +137,7 @@ export default function SearchPage() {
             ))}
           </div>
           <div className="d-flex justify-content-center gap-2 mt-4">
-            <button
-              className="btn btn-sm btn-outline-primary"
-              disabled={page === 0}
-              onClick={() => runSearch(page - 1)}
-            >
+            <button className="btn btn-sm btn-outline-primary" disabled={page === 0} onClick={() => runSearch(page - 1, applied)}>
               Previous
             </button>
             <span className="text-muted-soft align-self-center font-mono" style={{ fontSize: "0.8rem" }}>
@@ -158,7 +146,7 @@ export default function SearchPage() {
             <button
               className="btn btn-sm btn-outline-primary"
               disabled={page + 1 >= results.totalPages}
-              onClick={() => runSearch(page + 1)}
+              onClick={() => runSearch(page + 1, applied)}
             >
               Next
             </button>
