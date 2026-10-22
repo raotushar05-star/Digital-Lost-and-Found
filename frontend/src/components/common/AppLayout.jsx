@@ -30,7 +30,9 @@ const ADMIN_NAV = [
   { to: "/admin/stations", label: "Police Stations" },
   { to: "/admin/categories", label: "Categories" },
   { to: "/police/reports", label: "Reports" },
-  { to: "/admin/feedback", label: "Feedback & Complaints" }
+  { to: "/admin/feedback", label: "Feedback & Complaints" },
+  { to: "/admin/users", label: "Users" },
+  { to: "/admin/audit", label: "Audit log" }
 ];
 
 export default function AppLayout({ children }) {

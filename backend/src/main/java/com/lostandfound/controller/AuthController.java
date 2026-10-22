@@ -2,6 +2,7 @@ package com.lostandfound.controller;
 
 import com.lostandfound.dto.auth.*;
 import com.lostandfound.dto.common.MessageResponse;
+import com.lostandfound.security.SecurityUtils;
 import com.lostandfound.service.AuthService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -28,8 +29,23 @@ public class AuthController {
 
     @PostMapping("/logout")
     public ResponseEntity<MessageResponse> logout() {
-        // Stateless JWT: the client discards the token. Endpoint kept for a symmetric contract
-        // and as a hook for future token-blacklisting if ever required.
         return ResponseEntity.ok(MessageResponse.builder().message("Logged out successfully").build());
+    }
+
+    @PostMapping("/forgot-password")
+    public MessageResponse forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
+        return MessageResponse.builder().message(authService.forgotPassword(request)).build();
+    }
+
+    @PostMapping("/reset-password")
+    public MessageResponse resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
+        authService.resetPassword(request);
+        return MessageResponse.builder().message("Password updated. You can now sign in.").build();
+    }
+
+    @PostMapping("/change-password")
+    public MessageResponse changePassword(@Valid @RequestBody ChangePasswordRequest request) {
+        authService.changePassword(SecurityUtils.getCurrentUserId(), request);
+        return MessageResponse.builder().message("Password changed.").build();
     }
 }

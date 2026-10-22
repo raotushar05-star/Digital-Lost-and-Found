@@ -78,16 +78,18 @@ public class SecurityConfig {
                 .authenticationProvider(authenticationProvider())
                 .authorizeHttpRequests(auth -> auth
                         // Public authentication endpoints
-                        .requestMatchers("/api/v1/auth/register", "/api/v1/auth/login").permitAll()
+                        .requestMatchers("/api/v1/auth/register", "/api/v1/auth/login",
+                                "/api/v1/auth/forgot-password", "/api/v1/auth/reset-password")
+                        .permitAll()
                         // Public read-only browsing endpoints
                         .requestMatchers(HttpMethod.GET, "/api/v1/categories").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/found-items").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/found-items/nearby").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/found-items/*/public").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/files/evidence/**").authenticated()
                         .requestMatchers(HttpMethod.GET, "/api/v1/files/**").permitAll()
                         .requestMatchers("/actuator/health").permitAll()
-                        .anyRequest().authenticated()
-                )
+                        .anyRequest().authenticated())
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
         return http.build();
     }

@@ -37,6 +37,11 @@ import CategoryManagementPage from "./pages/admin/CategoryManagementPage.jsx";
 import FeedbackPage from "./pages/user/FeedbackPage.jsx";
 import FeedbackInboxPage from "./pages/admin/FeedbackInboxPage.jsx";
 
+import ForgotPasswordPage from "./pages/auth/ForgotPasswordPage.jsx";
+import ResetPasswordPage from "./pages/auth/ResetPasswordPage.jsx";
+import AuditLogPage from "./pages/admin/AuditLogPage.jsx";
+import UserManagementPage from "./pages/admin/UserManagementPage.jsx";
+
 const POLICE_ROLES = ["POLICE_OFFICER", "POLICE_ADMIN"];
 const REPORTS_ROLES = ["POLICE_OFFICER", "POLICE_ADMIN", "SYSTEM_ADMIN"];
 const FEEDBACK_ROLES = ["USER", "POLICE_OFFICER", "POLICE_ADMIN"];
@@ -48,6 +53,8 @@ export default function App() {
       <Route path="/" element={<LandingPage />} />
       <Route path="/register" element={<RegisterPage />} />
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+      <Route path="/reset-password" element={<ResetPasswordPage />} />
       <Route path="/search" element={<SearchPage />} />
       <Route path="/map" element={<MapPage />} />
       <Route path="/found-items/:id" element={<FoundItemPublicDetailPage />} />
@@ -80,6 +87,8 @@ export default function App() {
       {/* Admin */}
       <Route path="/admin/stations" element={<ProtectedRoute allowedRoles={["SYSTEM_ADMIN"]}><StationManagementPage /></ProtectedRoute>} />
       <Route path="/admin/categories" element={<ProtectedRoute allowedRoles={["SYSTEM_ADMIN"]}><CategoryManagementPage /></ProtectedRoute>} />
+      <Route path="/admin/users" element={<ProtectedRoute allowedRoles={["SYSTEM_ADMIN"]}><UserManagementPage /></ProtectedRoute>} />
+      <Route path="/admin/audit" element={<ProtectedRoute allowedRoles={["SYSTEM_ADMIN"]}><AuditLogPage /></ProtectedRoute>} />
       <Route path="/admin/feedback" element={<ProtectedRoute allowedRoles={["SYSTEM_ADMIN"]}><FeedbackInboxPage /></ProtectedRoute>} />
 
       <Route path="*" element={<LandingPage />} />

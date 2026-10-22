@@ -8,6 +8,7 @@ import { claimService } from "../../services/claimService";
 import { policeService } from "../../services/policeService";
 import { extractErrorMessage } from "../../services/apiClient";
 import { formatDateTime } from "../../utils/format";
+import ProtectedFileLink from "../../components/common/ProtectedFileLink.jsx";
 
 export default function PoliceClaimDetailPage() {
   const { id } = useParams();
@@ -124,11 +125,7 @@ export default function PoliceClaimDetailPage() {
                     <div>
                       <div className="fw-medium">{ev.evidenceType.replaceAll("_", " ")}</div>
                       <div className="text-muted-soft" style={{ fontSize: "0.8rem" }}>{ev.description}</div>
-                      {ev.fileUrl && (
-                        <a href={ev.fileUrl} target="_blank" rel="noreferrer" style={{ fontSize: "0.8rem" }}>
-                          View file
-                        </a>
-                      )}
+                      {ev.fileUrl && <ProtectedFileLink fileUrl={ev.fileUrl} />}
                     </div>
                     <StatusStamp status={ev.verificationStatus} />
                   </div>

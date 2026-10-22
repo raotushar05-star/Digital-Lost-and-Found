@@ -6,6 +6,7 @@ import LoadingSpinner from "../../components/common/LoadingSpinner.jsx";
 import { userService } from "../../services/userService";
 import { extractErrorMessage } from "../../services/apiClient";
 import { useAuth } from "../../context/AuthContext.jsx";
+import ChangePasswordCard from "../../components/common/ChangePasswordCard.jsx";
 
 export default function ProfilePage() {
   const { refreshProfile } = useAuth();
@@ -101,6 +102,7 @@ export default function ProfilePage() {
           {saving ? "Saving…" : "Save changes"}
         </button>
       </form>
+      <ChangePasswordCard />
     </AppLayout>
   );
 }

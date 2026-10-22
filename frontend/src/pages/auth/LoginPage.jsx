@@ -121,6 +121,9 @@ export default function LoginPage() {
               onChange={(e) => setPassword(e.target.value)}
             />
           </div>
+          <div className="text-end mb-3" style={{ fontSize: "0.85rem" }}>
+            <Link to="/forgot-password">Forgot password?</Link>
+          </div>
           <button className="btn btn-primary w-100" disabled={submitting}>
             {submitting ? "Signing in…" : `Sign in as ${option.label}`}
           </button>
