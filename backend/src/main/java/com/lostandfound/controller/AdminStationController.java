@@ -13,6 +13,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/admin/stations")
@@ -21,6 +22,11 @@ import java.util.UUID;
 public class AdminStationController {
 
     private final StationService stationService;
+
+    @GetMapping("/unassigned")
+    public Map<String, Long> unassigned() {
+        return stationService.unassignedSummary();
+    }
 
     @PostMapping
     public ResponseEntity<StationCreateResponse> create(@Valid @RequestBody StationCreateRequest request) {

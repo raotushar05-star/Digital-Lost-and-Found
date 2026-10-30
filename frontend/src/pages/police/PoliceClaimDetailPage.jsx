@@ -9,6 +9,8 @@ import { policeService } from "../../services/policeService";
 import { extractErrorMessage } from "../../services/apiClient";
 import { formatDateTime } from "../../utils/format";
 import ProtectedFileLink from "../../components/common/ProtectedFileLink.jsx";
+import DownloadServerPdfButton from "../../components/common/DownloadServerPdfButton.jsx";
+import ProtectedImage from "../../components/common/ProtectedImage.jsx";
 
 export default function PoliceClaimDetailPage() {
   const { id } = useParams();
@@ -18,7 +20,7 @@ export default function PoliceClaimDetailPage() {
   const [error, setError] = useState(null);
   const [notes, setNotes] = useState("");
   const [working, setWorking] = useState(false);
-  const [handoverForm, setHandoverForm] = useState({ handoverNotes: "", acknowledgementReference: "" });
+  const [handoverForm, setHandoverForm] = useState({ handoverNotes: "", acknowledgementReference: "", otp: "" });
   const [handoverDone, setHandoverDone] = useState(null);
 
   const load = () => {
@@ -115,7 +117,25 @@ export default function PoliceClaimDetailPage() {
             <div className="page-eyebrow mb-1">Claimant's statement</div>
             <p className="mb-0">{claim.claimDetails}</p>
           </div>
-
+          {claim.lostItemPhotos?.length > 0 && (
+            <div className="card p-3 mb-3">
+              <h2 style={{ fontSize: "1rem" }} className="mb-1">Photos from the claimant's lost report</h2>
+              <p className="text-muted-soft mb-2" style={{ fontSize: "0.8rem" }}>
+                Unverified context only. The claimant uploaded these before filing this claim, and they could be copied
+                from a public listing. Do not treat them as proof of ownership; use the evidence below for that.
+              </p>
+              <div className="d-flex flex-wrap gap-2">
+                {claim.lostItemPhotos.map((p) => (
+                  <ProtectedImage
+                    key={p.photoId}
+                    fileUrl={p.fileUrl}
+                    alt="Lost report"
+                    style={{ width: 96, height: 96, objectFit: "cover", borderRadius: "var(--radius-sm)", border: "1px solid var(--line)" }}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
           <div className="card p-3 mb-3">
             <h2 style={{ fontSize: "1rem" }} className="mb-2">Evidence submitted</h2>
             {claim.evidence && claim.evidence.length > 0 ? (
@@ -160,12 +180,27 @@ export default function PoliceClaimDetailPage() {
             </div>
           )}
 
-          {claim.status === "APPROVED" && !handoverDone && (
+          {claim.status === "APPROVED" && !claim.handoverRecorded && !handoverDone && (
             <form onSubmit={handleHandover} className="card p-3">
               <h2 style={{ fontSize: "1rem" }} className="mb-2">Record handover</h2>
               <p className="text-muted-soft" style={{ fontSize: "0.82rem" }}>
                 Confirms the item was physically returned to {claim.claimantName}.
               </p>
+              <div className="mb-2">
+                <label className="form-label">Claimant's handover code (6 digits)</label>
+                <input
+                  className="form-control font-mono"
+                  required
+                  inputMode="numeric"
+                  maxLength={6}
+                  autoComplete="off"
+                  value={handoverForm.otp}
+                  onChange={(e) => setHandoverForm({ ...handoverForm, otp: e.target.value.replace(/\D/g, "") })}
+                />
+                <div className="text-muted-soft" style={{ fontSize: "0.75rem" }}>
+                  The claimant gets this code from their claim page.
+                </div>
+              </div>
               <div className="mb-2">
                 <label className="form-label">Acknowledgement reference (optional)</label>
                 <input
@@ -189,9 +224,14 @@ export default function PoliceClaimDetailPage() {
             </form>
           )}
 
-          {handoverDone && (
-            <div className="alert alert-success">
-              Handover recorded at {formatDateTime(handoverDone.handoverDate)}.
+          {(handoverDone || claim.handoverRecorded) && (
+            <div className="alert alert-success d-flex justify-content-between align-items-center">
+              <span>Handover recorded{handoverDone ? ` at ${formatDateTime(handoverDone.handoverDate)}` : ""}.</span>
+              <DownloadServerPdfButton
+                label="Download receipt"
+                fallbackName="findline-handover-receipt.pdf"
+                load={() => claimService.downloadReceipt(id)}
+              />
             </div>
           )}
         </div>

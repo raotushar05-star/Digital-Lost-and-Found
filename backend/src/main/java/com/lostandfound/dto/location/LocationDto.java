@@ -5,11 +5,16 @@ import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
+import jakarta.validation.constraints.Pattern;
 
 import java.math.BigDecimal;
 import java.util.UUID;
 
-@Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
 public class LocationDto {
     private UUID locationId;
 
@@ -27,6 +32,7 @@ public class LocationDto {
     private String locality;
 
     @NotBlank(message = "City is required")
+    @Pattern(regexp = "^[\\p{L}][\\p{L} .'-]{1,99}$", message = "City can contain only letters and spaces")
     private String city;
 
     private String state;

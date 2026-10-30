@@ -75,11 +75,13 @@ export default function StationManagementPage() {
   const [submitting, setSubmitting] = useState(false);
   const [attempted, setAttempted] = useState(false);
   const [geo, setGeo] = useState({ status: "idle" });
+  const [unassigned, setUnassigned] = useState(null);
   const geoRequest = useRef(0);
 
   const load = () => {
     setLoading(true);
     stationService.getStations().then(setStations).finally(() => setLoading(false));
+    stationService.getUnassigned().then(setUnassigned).catch(() => {});
   };
 
   useEffect(load, []);
@@ -205,26 +207,34 @@ export default function StationManagementPage() {
         subtitle="Creating a station also creates its Station Officer login. Lost reports are assigned to the nearest station with a map pin."
       />
       <div className="row g-4">
-        <div className="col-lg-7">
+                <div className="col-lg-7">
           {loading ? (
             <LoadingSpinner />
           ) : (
-            <div className="card">
-              <div className="list-group list-group-flush">
-                {stations.map((s) => (
-                  <div key={s.stationId} className="list-group-item d-flex justify-content-between align-items-center p-3">
-                    <div>
-                      <div className="fw-medium">{s.stationName}</div>
-                      <div className="text-muted-soft font-mono" style={{ fontSize: "0.78rem" }}>{s.stationCode}</div>
-                      <div className="text-muted-soft" style={{ fontSize: "0.8rem" }}>{s.address}</div>
+            <>
+              {unassigned && unassigned.lostReports + unassigned.foundReports > 0 && (
+                <div className="alert alert-warning" style={{ fontSize: "0.85rem" }}>
+                  {unassigned.lostReports} lost and {unassigned.foundReports} found report(s) are farther than the routing
+                  limit from every station. Add a station near them and they will be assigned automatically.
+                </div>
+              )}
+              <div className="card">
+                <div className="list-group list-group-flush">
+                  {stations.map((s) => (
+                    <div key={s.stationId} className="list-group-item d-flex justify-content-between align-items-center p-3">
+                      <div>
+                        <div className="fw-medium">{s.stationName}</div>
+                        <div className="text-muted-soft font-mono" style={{ fontSize: "0.78rem" }}>{s.stationCode}</div>
+                        <div className="text-muted-soft" style={{ fontSize: "0.8rem" }}>{s.address}</div>
+                      </div>
+                      <button className="btn btn-sm btn-outline-primary" onClick={() => startEdit(s)}>
+                        Edit
+                      </button>
                     </div>
-                    <button className="btn btn-sm btn-outline-primary" onClick={() => startEdit(s)}>
-                      Edit
-                    </button>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
-            </div>
+            </>
           )}
         </div>
         <div className="col-lg-5">
@@ -264,7 +274,7 @@ export default function StationManagementPage() {
               inputMode="numeric"
               maxLength={12}
               value={form.phone}
-              onChange={set("phone", digits)}
+              onChange={set("phone", digits)} 
               error={msg("phone", form.phone)}
             />
 

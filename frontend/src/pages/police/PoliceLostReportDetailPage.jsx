@@ -9,6 +9,7 @@ import StatusStamp from "../../components/common/StatusStamp.jsx";
 import { policeService } from "../../services/policeService";
 import { extractErrorMessage } from "../../services/apiClient";
 import { formatDate } from "../../utils/format";
+import ProtectedImage from "../../components/common/ProtectedImage.jsx";
 
 export default function PoliceLostReportDetailPage() {
   const { id } = useParams();
@@ -99,7 +100,7 @@ export default function PoliceLostReportDetailPage() {
             {report.photos?.length ? (
               <div className="d-flex flex-wrap gap-2">
                 {report.photos.map((photo) => (
-                  <img key={photo.photoId} src={photo.fileUrl} alt="Lost item report" style={{ width: 150, height: 150, objectFit: "cover", borderRadius: "var(--radius-sm)", border: "1px solid var(--line)" }} />
+                  <ProtectedImage key={photo.photoId} fileUrl={photo.fileUrl} alt="Lost item report" style={{ width: 150, height: 150, objectFit: "cover", borderRadius: "var(--radius-sm)", border: "1px solid var(--line)" }} />
                 ))}
               </div>
             ) : <p className="text-muted-soft mb-0">No photos were submitted.</p>}

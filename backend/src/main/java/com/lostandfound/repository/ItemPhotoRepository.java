@@ -5,9 +5,14 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
 import java.util.UUID;
+import java.util.Optional;
 
 public interface ItemPhotoRepository extends JpaRepository<ItemPhoto, UUID> {
     List<ItemPhoto> findByLostItem_LostItemId(UUID lostItemId);
+
     List<ItemPhoto> findByFoundItem_FoundItemId(UUID foundItemId);
+
     List<ItemPhoto> findByFoundReport_FoundReportId(UUID foundReportId);
+
+    Optional<ItemPhoto> findFirstByFileUrlEndingWith(String suffix);
 }

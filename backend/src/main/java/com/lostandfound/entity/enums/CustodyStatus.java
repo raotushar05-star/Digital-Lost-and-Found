@@ -4,5 +4,6 @@ public enum CustodyStatus {
     IN_CUSTODY,
     CLAIMED,
     RETURNED,
-    TRANSFERRED
+    TRANSFERRED,
+    DISPOSED
 }

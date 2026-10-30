@@ -20,7 +20,7 @@ export default function FoundItemInventoryPage() {
 
   useEffect(() => {
     if (isAdmin) {
-      stationService.getStations().then(setStations).catch(() => {});
+      stationService.getStations().then(setStations).catch(() => { });
     }
   }, [isAdmin]);
 
@@ -34,7 +34,8 @@ export default function FoundItemInventoryPage() {
     policeService.getStationInventory(stationId).then(setItems).finally(() => setLoading(false));
   }, [stationId]);
 
-  const filtered = items.filter((i) => filter === "ALL" || i.verificationStatus === filter);
+  const filtered = items.filter((i) =>
+    filter === "ALL" ? true : filter === "OVERDUE" ? i.overdue : i.verificationStatus === filter);
 
   return (
     <AppLayout>
@@ -55,6 +56,7 @@ export default function FoundItemInventoryPage() {
               <option value="PENDING">Pending verification</option>
               <option value="VERIFIED">Verified</option>
               <option value="REJECTED">Rejected</option>
+              <option value="OVERDUE">Overdue (past retention)</option>
             </select>
           </>
         }
@@ -79,6 +81,7 @@ export default function FoundItemInventoryPage() {
                   </div>
                 </div>
                 <div className="d-flex gap-2">
+                  {item.overdue && <span className="stamp stamp-danger">Overdue · {item.daysInCustody}d</span>}
                   <StatusStamp status={item.custodyStatus} />
                   <StatusStamp status={item.verificationStatus} />
                 </div>

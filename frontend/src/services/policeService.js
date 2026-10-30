@@ -31,5 +31,8 @@ export const policeService = {
   downloadCaseFilePdf: (caseId) =>
     apiClient.get(`/police/reports/case-files/${caseId}/pdf`, { responseType: "blob" }),
   downloadAllCaseFilesPdf: (params) =>
-    apiClient.get("/police/reports/case-files/pdf", { params, responseType: "blob" })
+    apiClient.get("/police/reports/case-files/pdf", { params, responseType: "blob" }),
+  transferItem: (id, payload) => apiClient.post(`/police/found-items/${id}/transfer`, payload).then((r) => r.data),
+  getTransfers: (id) => apiClient.get(`/police/found-items/${id}/transfers`).then((r) => r.data),
+  disposeItem: (id, payload) => apiClient.post(`/police/found-items/${id}/dispose`, payload).then((r) => r.data)
 };

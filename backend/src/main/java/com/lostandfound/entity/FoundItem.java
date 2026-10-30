@@ -13,7 +13,11 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "found_items")
-@Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
 public class FoundItem {
 
     @Id
@@ -64,6 +68,15 @@ public class FoundItem {
     @Column(name = "verification_status", nullable = false, length = 30)
     @Builder.Default
     private FoundItemVerificationStatus verificationStatus = FoundItemVerificationStatus.PENDING;
+
+    @Column(name = "disposed_at")
+    private LocalDateTime disposedAt;
+
+    @Column(name = "disposal_method", length = 40)
+    private String disposalMethod;
+
+    @Column(name = "disposal_notes", columnDefinition = "TEXT")
+    private String disposalNotes;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;

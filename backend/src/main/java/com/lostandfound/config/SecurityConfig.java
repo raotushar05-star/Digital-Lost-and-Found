@@ -87,6 +87,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/v1/found-items/nearby").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/found-items/*/public").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/files/evidence/**").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/files/lost-items/**").authenticated()
                         .requestMatchers(HttpMethod.GET, "/api/v1/files/**").permitAll()
                         .requestMatchers("/actuator/health").permitAll()
                         .anyRequest().authenticated())

@@ -13,6 +13,7 @@ const STATUS_MAP = {
   RETURNED: { label: "Returned", tone: "success" },
   RESOLVED: { label: "Resolved", tone: "success" },
   WITHDRAWN: { label: "Withdrawn", tone: "neutral" },
+  DISPOSED: { label: "Disposed", tone: "neutral" },
 
   // Found report
   SUBMITTED: { label: "Submitted", tone: "neutral" },

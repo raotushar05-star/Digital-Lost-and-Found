@@ -16,6 +16,13 @@ import com.lostandfound.repository.PoliceStationRepository;
 import com.lostandfound.repository.UserRepository;
 import com.lostandfound.util.IdentityNormalizer;
 import com.lostandfound.exception.BadRequestException;
+import com.lostandfound.entity.FoundReport;
+import com.lostandfound.entity.LostItem;
+import com.lostandfound.entity.enums.FoundReportStatus;
+import com.lostandfound.repository.FoundReportRepository;
+import com.lostandfound.repository.LostItemRepository;
+import org.springframework.beans.factory.annotation.Value;
+import java.util.Map;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -36,6 +43,50 @@ public class StationService {
     private final LocationService locationService;
     private final PasswordEncoder passwordEncoder;
     private final AuditService auditService;
+    private final LostItemRepository lostItemRepository;
+    private final FoundReportRepository foundReportRepository;
+
+    @Value("${app.routing.max-distance-km:30}")
+    private double maxDistanceKm = 30.0;
+
+    /** Pulls unassigned reports within the routing radius into the new station. */
+    private String adoptNearbyUnassigned(PoliceStation station) {
+        double lat = station.getLocation().getLatitude().doubleValue();
+        double lon = station.getLocation().getLongitude().doubleValue();
+        int lost = 0;
+        for (LostItem item : lostItemRepository.findByAssignedStationIsNullOrderByCreatedAtDesc()) {
+            if (within(item.getLocation(), lat, lon)) {
+                item.setAssignedStation(station);
+                lostItemRepository.save(item);
+                lost++;
+            }
+        }
+        int found = 0;
+        for (FoundReport report : foundReportRepository
+                .findByStatusAndAssignedStationIsNullOrderByCreatedAtDesc(FoundReportStatus.SUBMITTED)) {
+            if (within(report.getLocation(), lat, lon)) {
+                report.setAssignedStation(station);
+                foundReportRepository.save(report);
+                found++;
+            }
+        }
+        return (lost + found) == 0 ? ""
+                : " " + lost + " lost report(s) and " + found + " found report(s) nearby were assigned to it.";
+    }
+
+    private boolean within(Location loc, double lat, double lon) {
+        return loc != null && loc.getLatitude() != null && loc.getLongitude() != null
+                && LocationService.distanceKm(lat, lon, loc.getLatitude().doubleValue(),
+                        loc.getLongitude().doubleValue()) <= maxDistanceKm;
+    }
+
+    @Transactional(readOnly = true)
+    public Map<String, Long> unassignedSummary() {
+        return Map.of(
+                "lostReports", (long) lostItemRepository.findByAssignedStationIsNullOrderByCreatedAtDesc().size(),
+                "foundReports", (long) foundReportRepository
+                        .findByStatusAndAssignedStationIsNullOrderByCreatedAtDesc(FoundReportStatus.SUBMITTED).size());
+    }
 
     @Transactional(readOnly = true)
     public List<StationDto> getAllStations() {
@@ -95,6 +146,7 @@ public class StationService {
                 .build());
         auditService.log(officer, "STATION_OFFICER_PROVISIONED", "PoliceStation", station.getStationId());
 
+        String adopted = adoptNearbyUnassigned(station);
         return StationCreateResponse.builder()
                 .station(stationMapper.toDto(station))
                 .policeOfficer(StationAdminCredentialsDto.builder()
@@ -103,7 +155,7 @@ public class StationService {
                         .phone(officer.getPhone())
                         .role(officer.getRole().name())
                         .build())
-                .message("Station created with an officer login.")
+                .message("Station created with an officer login." + adopted)
                 .build();
     }
 

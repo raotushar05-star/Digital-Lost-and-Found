@@ -9,6 +9,8 @@ import PhotoUpload from "../../components/items/PhotoUpload.jsx";
 import { policeService } from "../../services/policeService";
 import { extractErrorMessage } from "../../services/apiClient";
 import { formatDate, formatDateTime } from "../../utils/format";
+import TransferCard from "../../components/police/TransferCard.jsx";
+import DisposalCard from "../../components/police/DisposalCard.jsx";
 
 export default function FoundItemAdminDetailPage() {
   const { id } = useParams();
@@ -162,6 +164,8 @@ export default function FoundItemAdminDetailPage() {
             <h2 style={{ fontSize: "1rem" }} className="mb-2">Photos</h2>
             <PhotoUpload onUpload={handleUpload} uploading={uploading} uploadedPhotos={item.photos} />
           </div>
+          <TransferCard item={item} />
+          <DisposalCard item={item} onDone={load} />
         </div>
 
         <div className="col-lg-5">

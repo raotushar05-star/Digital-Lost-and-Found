@@ -10,5 +10,7 @@ export const claimService = {
     if (file) form.append("file", file);
     return apiClient.post(`/claims/${claimId}/evidence`, form, { headers: { "Content-Type": "multipart/form-data" } }).then((r) => r.data);
   },
-  getEvidence: (claimId) => apiClient.get(`/claims/${claimId}/evidence`).then((r) => r.data)
+  getEvidence: (claimId) => apiClient.get(`/claims/${claimId}/evidence`).then((r) => r.data),
+  issueHandoverCode: (claimId) => apiClient.post(`/claims/${claimId}/handover-code`).then((r) => r.data),
+  downloadReceipt: (claimId) => apiClient.get(`/claims/${claimId}/handover-receipt`, { responseType: "blob" })
 };

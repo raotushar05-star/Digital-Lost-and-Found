@@ -26,9 +26,11 @@ public class NotificationService {
     private final NotificationRepository notificationRepository;
     private final NotificationMapper notificationMapper;
     private final EmailService emailService;
+    private final SmsService smsService;
 
     @Transactional
-    public Notification notify(User user, NotificationType type, String title, String message, Case relatedCase, Match relatedMatch) {
+    public Notification notify(User user, NotificationType type, String title, String message, Case relatedCase,
+            Match relatedMatch) {
         Notification notification = Notification.builder()
                 .user(user)
                 .notificationType(type)
@@ -39,6 +41,7 @@ public class NotificationService {
                 .build();
         notification = notificationRepository.save(notification);
         emailService.sendNotificationEmail(user, title, message);
+        smsService.sendIfImportant(user, type, title, message);
         return notification;
     }
 

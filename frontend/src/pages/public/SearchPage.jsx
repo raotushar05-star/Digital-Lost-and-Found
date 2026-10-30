@@ -73,16 +73,16 @@ export default function SearchPage() {
             </select>
           </div>
           <div className="col-md-2">
-            <input className="form-control" placeholder="City" value={filters.city} onChange={set("city")} />
+            <input className="form-control" placeholder="City" value={filters.city} onChange={set("city")} maxLength={100}/>
           </div>
           <div className="col-md-2">
-            <input className="form-control" placeholder="Color" value={filters.color} onChange={set("color")} />
+            <input className="form-control" placeholder="Color" value={filters.color} onChange={set("color")} maxLength={100}/>
           </div>
           <div className="col-md-2">
-            <input className="form-control" placeholder="Brand" value={filters.brand} onChange={set("brand")} />
+            <input className="form-control" placeholder="Brand" value={filters.brand} onChange={set("brand")} maxLength={100}/>
           </div>
           <div className="col-md-2">
-            <input className="form-control" placeholder="Keyword" value={filters.keyword} onChange={set("keyword")} />
+            <input className="form-control" placeholder="Keyword" value={filters.keyword} onChange={set("keyword")} maxLength={100}/>
           </div>
           <div className="col-md-1">
             <button className="btn btn-primary w-100">Go</button>

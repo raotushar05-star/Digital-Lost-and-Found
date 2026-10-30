@@ -8,7 +8,11 @@ import com.lostandfound.entity.FoundItem;
 import com.lostandfound.entity.ItemPhoto;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
+import com.lostandfound.entity.enums.CustodyStatus;
+import org.springframework.beans.factory.annotation.Value;
 
+import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.Comparator;
 
 @Component
@@ -17,6 +21,8 @@ public class FoundItemMapper {
 
     private final LocationMapper locationMapper;
     private final PhotoMapper photoMapper;
+    @Value("${app.retention.days:90}")
+    private int retentionDays;
 
     public FoundItemPublicDto toPublicDto(FoundItem item) {
         if (item == null) return null;
@@ -35,6 +41,9 @@ public class FoundItemMapper {
 
     public FoundItemAdminDto toAdminDto(FoundItem item, Case linkedCase) {
         if (item == null) return null;
+        long days = item.getReceivedDate() == null ? 0
+                : ChronoUnit.DAYS.between(item.getReceivedDate(), LocalDateTime.now());
+        boolean overdue = item.getCustodyStatus() == CustodyStatus.IN_CUSTODY && days >= retentionDays;
         return FoundItemAdminDto.builder()
                 .foundItemId(item.getFoundItemId())
                 .foundReportId(item.getFoundReport() != null ? item.getFoundReport().getFoundReportId() : null)
@@ -54,6 +63,11 @@ public class FoundItemMapper {
                 .caseId(linkedCase != null ? linkedCase.getCaseId() : null)
                 .caseNumber(linkedCase != null ? linkedCase.getCaseNumber() : null)
                 .photos(photoMapper.toDtoList(item.getPhotos()))
+                .daysInCustody((int) days)
+                .overdue(overdue)
+                .disposedAt(item.getDisposedAt())
+                .disposalMethod(item.getDisposalMethod())
+                .disposalNotes(item.getDisposalNotes())
                 .createdAt(item.getCreatedAt())
                 .updatedAt(item.getUpdatedAt())
                 .build();

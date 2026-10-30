@@ -8,6 +8,7 @@ import { claimService } from "../../services/claimService";
 import { extractErrorMessage } from "../../services/apiClient";
 import { formatDateTime } from "../../utils/format";
 import ProtectedFileLink from "../../components/common/ProtectedFileLink.jsx";
+import DownloadServerPdfButton from "../../components/common/DownloadServerPdfButton.jsx";
 
 const EVIDENCE_TYPES = ["RECEIPT", "PHOTOGRAPH", "SERIAL_NUMBER", "UNIQUE_MARK", "OTHER"];
 
@@ -19,6 +20,21 @@ export default function ClaimDetailPage() {
   const [loadError, setLoadError] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [form, setForm] = useState({ evidenceType: "RECEIPT", description: "", file: null });
+  const [code, setCode] = useState(null);
+  const [codeError, setCodeError] = useState(null);
+  const [codeBusy, setCodeBusy] = useState(false);
+
+  const showCode = async () => {
+    setCodeBusy(true);
+    setCodeError(null);
+    try {
+      setCode(await claimService.issueHandoverCode(id));
+    } catch (err) {
+      setCodeError(extractErrorMessage(err));
+    } finally {
+      setCodeBusy(false);
+    }
+  };
 
   const load = () => {
     setLoading(true);
@@ -92,9 +108,46 @@ export default function ClaimDetailPage() {
               {claim.status === "APPROVED" && " Please visit the station to complete the handover."}
             </div>
           )}
+          {claim.status === "APPROVED" && (
+            <div className="card p-3 mb-3">
+              <div className="page-eyebrow mb-1">Collect your item</div>
+              {claim.handoverRecorded ? (
+                <>
+                  <p className="mb-2">Your item has been handed over to you.</p>
+                  <DownloadServerPdfButton
+                    label="Download receipt"
+                    fallbackName="findline-handover-receipt.pdf"
+                    load={() => claimService.downloadReceipt(id)}
+                  />
+                </>
+              ) : (
+                <>
+                  <p className="text-muted-soft" style={{ fontSize: "0.85rem" }}>
+                    Visit the station and show this one-time code to the officer. Generating a new code cancels the old one.
+                  </p>
+                  <ErrorAlert message={codeError} />
+                  {code && (
+                    <div className="mb-2">
+                      <div className="font-mono" style={{ fontSize: "2rem", letterSpacing: "0.3rem" }}>{code.code}</div>
+                      <div className="text-muted-soft" style={{ fontSize: "0.75rem" }}>
+                        Valid until {formatDateTime(code.expiresAt)}
+                      </div>
+                    </div>
+                  )}
+                  <button className="btn btn-sm btn-primary" onClick={showCode} disabled={codeBusy}>
+                    {code ? "Generate a new code" : "Show my handover code"}
+                  </button>
+                </>
+              )}
+            </div>
+          )}
 
           <div className="card p-3">
             <h2 style={{ fontSize: "1rem" }} className="mb-2">Evidence</h2>
+            <div className="text-muted-soft" style={{ fontSize: "0.75rem" }}>
+              Used to find possible matches. Serial numbers and unique marks stay private; only police see them,
+              and they use them later to check ownership.
+            </div>
             {claim.evidence && claim.evidence.length > 0 ? (
               <div className="list-group list-group-flush mb-3">
                 {claim.evidence.map((ev) => (
@@ -111,7 +164,10 @@ export default function ClaimDetailPage() {
             ) : (
               <p className="text-muted-soft" style={{ fontSize: "0.85rem" }}>No evidence submitted yet.</p>
             )}
-
+            <p className="text-muted-soft" style={{ fontSize: "0.8rem" }}>
+              Why we ask: a match only means an item looks similar. Receipts, photos and serial numbers let police
+              confirm it is really yours. Only you and police can see them.
+            </p>
             {!finalized && (
               <form onSubmit={handleAddEvidence} className="hairline-top pt-3">
                 <ErrorAlert message={error} />

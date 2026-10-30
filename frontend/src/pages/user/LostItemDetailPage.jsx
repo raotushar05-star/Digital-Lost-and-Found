@@ -142,6 +142,10 @@ export default function LostItemDetailPage() {
             <h2 style={{ fontSize: "1rem" }} className="mb-2">Photos</h2>
             <PhotoUpload onUpload={handleUpload} uploading={uploading} uploadedPhotos={item.photos} />
           </div>
+          <p className="text-muted-soft" style={{ fontSize: "0.8rem" }}>
+            Optional. Photos help officers recognise your item. Only you and police can see them. You will be asked
+            for proof, such as a receipt, separately if you claim a found item.
+          </p>
         </div>
 
         <div className="col-lg-5">

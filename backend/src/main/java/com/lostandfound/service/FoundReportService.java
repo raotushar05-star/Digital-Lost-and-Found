@@ -22,6 +22,7 @@ import com.lostandfound.repository.FoundReportRepository;
 import com.lostandfound.repository.ItemPhotoRepository;
 import com.lostandfound.security.UserPrincipal;
 import com.lostandfound.util.FileStorageService;
+import com.lostandfound.entity.PoliceStation;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -46,90 +47,97 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class FoundReportService {
 
-    private final FoundReportRepository foundReportRepository;
-    private final FoundItemRepository foundItemRepository;
-    private final CategoryRepository categoryRepository;
-    private final ItemPhotoRepository itemPhotoRepository;
-    private final LocationService locationService;
+        private final FoundReportRepository foundReportRepository;
+        private final FoundItemRepository foundItemRepository;
+        private final CategoryRepository categoryRepository;
+        private final ItemPhotoRepository itemPhotoRepository;
+        private final LocationService locationService;
         private final StationAssignmentService stationAssignmentService;
-    private final FileStorageService fileStorageService;
-    private final AuditService auditService;
-    private final NotificationService notificationService;
-    private final FoundReportMapper foundReportMapper;
-    private final PhotoMapper photoMapper;
+        private final FileStorageService fileStorageService;
+        private final AuditService auditService;
+        private final NotificationService notificationService;
+        private final FoundReportMapper foundReportMapper;
+        private final PhotoMapper photoMapper;
 
-    @Transactional
-    public FoundReportCreateResponse create(User finder, FoundReportCreateRequest request, MultipartFile photo) {
-        if (photo == null || photo.isEmpty()) {
-            throw new BadRequestException("A photo of the found item is required when submitting a report");
+        @Transactional
+        public FoundReportCreateResponse create(User finder, FoundReportCreateRequest request, MultipartFile photo) {
+                if (photo == null || photo.isEmpty()) {
+                        throw new BadRequestException("A photo of the found item is required when submitting a report");
+                }
+                Category category = categoryRepository.findById(request.getCategoryId())
+                                .orElseThrow(() -> new ResourceNotFoundException(
+                                                "Category not found: " + request.getCategoryId()));
+                Location location = locationService.createFromDto(request.getLocation());
+
+                FoundReport report = FoundReport.builder()
+                                .finder(finder)
+                                .category(category)
+                                .description(request.getDescription())
+                                .brand(request.getBrand())
+                                .color(request.getColor())
+                                .foundDate(request.getFoundDate())
+                                .location(location)
+                                .assignedStation(stationAssignmentService.findNearestStation(location).orElse(null))
+                                .status(FoundReportStatus.SUBMITTED)
+                                .build();
+                report = foundReportRepository.save(report);
+
+                String photoUrl = fileStorageService.store(photo, "found-reports");
+                ItemPhoto itemPhoto = ItemPhoto.builder()
+                                .foundReport(report)
+                                .fileUrl(photoUrl)
+                                .isPrimary(true)
+                                .visibility(PhotoVisibility.PUBLIC)
+                                .uploadedBy(finder)
+                                .build();
+                itemPhotoRepository.save(itemPhoto);
+
+                PoliceStation assigned = report.getAssignedStation();
+                String where = assigned != null
+                                ? assigned.getStationName() + " (" + assigned.getAddress() + ")"
+                                : "your nearest police station";
+                notificationService.notify(
+                                finder,
+                                NotificationType.GENERAL,
+                                "Found item report received",
+                                "Your found-item report was submitted successfully. Please take the item to " + where
+                                                + " so an officer can register and verify it. Until then it will not appear in public search.",
+                                null,
+                                null);
+
+                auditService.log(finder, "FOUND_REPORT_SUBMITTED", "FoundReport", report.getFoundReportId());
+
+                return FoundReportCreateResponse.builder()
+                                .foundReportId(report.getFoundReportId())
+                                .status(report.getStatus().name())
+                                .message("Found-item report submitted successfully")
+                                .build();
         }
-        Category category = categoryRepository.findById(request.getCategoryId())
-                .orElseThrow(() -> new ResourceNotFoundException("Category not found: " + request.getCategoryId()));
-        Location location = locationService.createFromDto(request.getLocation());
 
-        FoundReport report = FoundReport.builder()
-                .finder(finder)
-                .category(category)
-                .description(request.getDescription())
-                .brand(request.getBrand())
-                .color(request.getColor())
-                .foundDate(request.getFoundDate())
-                .location(location)
-                .assignedStation(stationAssignmentService.findNearestStation(location).orElse(null))
-                .status(FoundReportStatus.SUBMITTED)
-                .build();
-        report = foundReportRepository.save(report);
-
-        String photoUrl = fileStorageService.store(photo, "found-reports");
-        ItemPhoto itemPhoto = ItemPhoto.builder()
-                .foundReport(report)
-                .fileUrl(photoUrl)
-                .isPrimary(true)
-                .visibility(PhotoVisibility.PUBLIC)
-                .uploadedBy(finder)
-                .build();
-        itemPhotoRepository.save(itemPhoto);
-
-        notificationService.notify(
-                finder,
-                NotificationType.GENERAL,
-                "Found item report received",
-                "Your found-item report was submitted successfully and is now pending review"
-                        + (report.getAssignedStation() != null ? " at " + report.getAssignedStation().getStationName() : " by police") + ".",
-                null,
-                null
-        );
-
-        auditService.log(finder, "FOUND_REPORT_SUBMITTED", "FoundReport", report.getFoundReportId());
-
-        return FoundReportCreateResponse.builder()
-                .foundReportId(report.getFoundReportId())
-                .status(report.getStatus().name())
-                .message("Found-item report submitted successfully")
-                .build();
-    }
-
-    @Transactional(readOnly = true)
-    public FoundReportDto getById(UUID foundReportId, UserPrincipal principal) {
-        FoundReport report = getEntityById(foundReportId);
-        boolean isFinder = report.getFinder().getUserId().equals(principal.getUserId());
-        boolean isPolice = "POLICE_OFFICER".equals(principal.getRole()) || "POLICE_ADMIN".equals(principal.getRole()) || "SYSTEM_ADMIN".equals(principal.getRole());
-        if (!isFinder && !isPolice) {
-            throw new ForbiddenException("You do not have permission to view this found report");
-        }
+        @Transactional(readOnly = true)
+        public FoundReportDto getById(UUID foundReportId, UserPrincipal principal) {
+                FoundReport report = getEntityById(foundReportId);
+                boolean isFinder = report.getFinder().getUserId().equals(principal.getUserId());
+                boolean isPolice = "POLICE_OFFICER".equals(principal.getRole())
+                                || "POLICE_ADMIN".equals(principal.getRole())
+                                || "SYSTEM_ADMIN".equals(principal.getRole());
+                if (!isFinder && !isPolice) {
+                        throw new ForbiddenException("You do not have permission to view this found report");
+                }
                 if (!isFinder && !"SYSTEM_ADMIN".equals(principal.getRole())
                                 && (principal.getStationId() == null
-                                || (report.getAssignedStation() != null
-                                && !report.getAssignedStation().getStationId().equals(principal.getStationId())))) {
+                                                || (report.getAssignedStation() != null
+                                                                && !report.getAssignedStation().getStationId()
+                                                                                .equals(principal.getStationId())))) {
                         throw new ForbiddenException("This found report is assigned to another police station");
                 }
-        UUID linkedFoundItemId = foundItemRepository.findByFoundReport_FoundReportId(foundReportId)
-                .map(fi -> fi.getFoundItemId())
-                .orElse(null);
-        List<com.lostandfound.dto.file.PhotoDto> photos = photoMapper.toDtoList(
-                itemPhotoRepository.findByFoundReport_FoundReportId(foundReportId));
-        return foundReportMapper.toDto(report, linkedFoundItemId, photos);
-    }
+                UUID linkedFoundItemId = foundItemRepository.findByFoundReport_FoundReportId(foundReportId)
+                                .map(fi -> fi.getFoundItemId())
+                                .orElse(null);
+                List<com.lostandfound.dto.file.PhotoDto> photos = photoMapper.toDtoList(
+                                itemPhotoRepository.findByFoundReport_FoundReportId(foundReportId));
+                return foundReportMapper.toDto(report, linkedFoundItemId, photos);
+        }
 
         @Transactional(readOnly = true)
         public List<FoundReportDto> getSubmittedReports(UserPrincipal principal) {
@@ -143,15 +151,18 @@ public class FoundReportService {
                         throw new ForbiddenException("Your police account is not assigned to a station");
                 }
                 List<FoundReport> reports = new java.util.ArrayList<>(foundReportRepository
-                                .findByStatusAndAssignedStation_StationIdOrderByCreatedAtDesc(FoundReportStatus.SUBMITTED, principal.getStationId()));
-                reports.addAll(foundReportRepository.findByStatusAndAssignedStationIsNullOrderByCreatedAtDesc(FoundReportStatus.SUBMITTED));
+                                .findByStatusAndAssignedStation_StationIdOrderByCreatedAtDesc(
+                                                FoundReportStatus.SUBMITTED, principal.getStationId()));
+                reports.addAll(foundReportRepository
+                                .findByStatusAndAssignedStationIsNullOrderByCreatedAtDesc(FoundReportStatus.SUBMITTED));
                 return reports.stream()
                                 .map(report -> getById(report.getFoundReportId(), principal))
                                 .collect(Collectors.toList());
         }
 
-    public FoundReport getEntityById(UUID foundReportId) {
-        return foundReportRepository.findById(foundReportId)
-                .orElseThrow(() -> new ResourceNotFoundException("Found report not found: " + foundReportId));
-    }
+        public FoundReport getEntityById(UUID foundReportId) {
+                return foundReportRepository.findById(foundReportId)
+                                .orElseThrow(() -> new ResourceNotFoundException(
+                                                "Found report not found: " + foundReportId));
+        }
 }

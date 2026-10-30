@@ -11,7 +11,11 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "claims")
-@Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
 public class Claim {
 
     @Id
@@ -46,6 +50,16 @@ public class Claim {
     @Column(name = "reviewed_at")
     private LocalDateTime reviewedAt;
 
+    @Column(name = "handover_otp_hash", length = 100)
+    private String handoverOtpHash;
+
+    @Column(name = "handover_otp_expires_at")
+    private LocalDateTime handoverOtpExpiresAt;
+
+    @Column(name = "handover_otp_attempts", nullable = false)
+    @Builder.Default
+    private Integer handoverOtpAttempts = 0;
+    
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 

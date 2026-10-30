@@ -121,6 +121,12 @@ export default function DashboardPage() {
                         <div className="text-muted-soft" style={{ fontSize: "0.75rem" }}>
                           {report.assignedStationName ? `Assigned to ${report.assignedStationName}` : "Awaiting station assignment"}
                         </div>
+                        {report.status === "SUBMITTED" && (
+                          <div className="text-brass" style={{ fontSize: "0.78rem" }}>
+                            Next step: take the item to{" "}
+                            {report.assignedStationName || "your nearest police station"} so police can verify it.
+                          </div>
+                        )}
                         <div className="text-muted-soft font-mono" style={{ fontSize: "0.7rem" }}>
                           Reference: {report.foundReportId}
                         </div>

@@ -10,10 +10,15 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * Full restricted representation of a found item, for authorized police personnel only.
+ * Full restricted representation of a found item, for authorized police
+ * personnel only.
  * Includes privateIdentifyingDetails used for later ownership verification.
  */
-@Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
 public class FoundItemAdminDto {
     private UUID foundItemId;
     private UUID foundReportId;
@@ -35,4 +40,9 @@ public class FoundItemAdminDto {
     private List<PhotoDto> photos;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    private Integer daysInCustody;
+    private Boolean overdue;
+    private LocalDateTime disposedAt;
+    private String disposalMethod;
+    private String disposalNotes;
 }

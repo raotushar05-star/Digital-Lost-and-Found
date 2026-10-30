@@ -1,4 +1,5 @@
 import React, { useRef, useState } from "react";
+import ProtectedImage from "../common/ProtectedImage.jsx";
 
 /**
  * Simple file-select + preview + upload button. The parent supplies an
@@ -29,9 +30,9 @@ export default function PhotoUpload({ onUpload, uploading, uploadedPhotos = [] }
     <div>
       <div className="d-flex flex-wrap gap-2 mb-2">
         {uploadedPhotos.map((p) => (
-          <img
+          <ProtectedImage
             key={p.photoId}
-            src={p.fileUrl}
+            fileUrl={p.fileUrl}
             alt="Uploaded"
             style={{ width: 84, height: 84, objectFit: "cover", borderRadius: "var(--radius-sm)", border: "1px solid var(--line)" }}
           />

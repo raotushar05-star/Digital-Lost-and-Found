@@ -18,10 +18,14 @@ import com.lostandfound.mapper.ClaimMapper;
 import com.lostandfound.repository.ClaimRepository;
 import com.lostandfound.repository.FoundItemRepository;
 import com.lostandfound.repository.LostItemRepository;
+import com.lostandfound.security.StationAccess;
 import com.lostandfound.security.UserPrincipal;
+import com.lostandfound.repository.HandoverRecordRepository;
+import com.lostandfound.entity.enums.CustodyStatus;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.lostandfound.mapper.PhotoMapper;
 
 import java.util.List;
 import java.util.UUID;
@@ -42,6 +46,8 @@ public class ClaimService {
     private final AuditService auditService;
     private final NotificationService notificationService;
     private final ClaimMapper claimMapper;
+    private final HandoverRecordRepository handoverRecordRepository;
+    private final PhotoMapper photoMapper;
 
     @Transactional
     public ClaimCreateResponse create(UUID foundItemId, User claimant, ClaimCreateRequest request) {
@@ -50,19 +56,24 @@ public class ClaimService {
         if (foundItem.getVerificationStatus() != FoundItemVerificationStatus.VERIFIED) {
             throw new BadRequestException("This item has not yet been verified by police and cannot be claimed");
         }
+        if (foundItem.getCustodyStatus() != CustodyStatus.IN_CUSTODY) {
+            throw new BadRequestException("This item is no longer in police custody and cannot be claimed");
+        }
         boolean hasActiveClaim = claimRepository.findByFoundItem_FoundItemIdOrderByCreatedAtDesc(foundItemId).stream()
                 .anyMatch(c -> c.getClaimant().getUserId().equals(claimant.getUserId())
                         && (c.getStatus() == ClaimStatus.PENDING
-                            || c.getStatus() == ClaimStatus.UNDER_VERIFICATION
-                            || c.getStatus() == ClaimStatus.DISPUTED));
+                                || c.getStatus() == ClaimStatus.UNDER_VERIFICATION
+                                || c.getStatus() == ClaimStatus.DISPUTED));
         if (hasActiveClaim) {
-            throw new ConflictException("You already have an active claim on this item. Wait for it to be resolved before submitting another.");
+            throw new ConflictException(
+                    "You already have an active claim on this item. Wait for it to be resolved before submitting another.");
         }
 
         LostItem lostItem = null;
         if (request.getLostItemId() != null) {
             lostItem = lostItemRepository.findById(request.getLostItemId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Lost item not found: " + request.getLostItemId()));
+                    .orElseThrow(
+                            () -> new ResourceNotFoundException("Lost item not found: " + request.getLostItemId()));
             if (!lostItem.getOwner().getUserId().equals(claimant.getUserId())) {
                 throw new ForbiddenException("You can only reference your own lost-item reports in a claim");
             }
@@ -109,7 +120,12 @@ public class ClaimService {
     public ClaimDetailDto getById(UUID claimId, UserPrincipal principal) {
         Claim claim = getEntityById(claimId);
         assertCanView(claim, principal);
-        return claimMapper.toDetailDto(claim);
+        ClaimDetailDto dto = claimMapper.toDetailDto(claim);
+        boolean police = StationAccess.isPoliceStaff(principal) || StationAccess.isSystemAdmin(principal);
+        if (police && claim.getLostItem() != null) {
+            dto.setLostItemPhotos(photoMapper.toDtoList(claim.getLostItem().getPhotos()));
+        }
+        return dto;
     }
 
     @Transactional(readOnly = true)
@@ -127,14 +143,16 @@ public class ClaimService {
 
     public void assertCanView(Claim claim, UserPrincipal principal) {
         boolean isClaimant = claim.getClaimant().getUserId().equals(principal.getUserId());
-        boolean isPolice = "POLICE_OFFICER".equals(principal.getRole()) || "POLICE_ADMIN".equals(principal.getRole()) || "SYSTEM_ADMIN".equals(principal.getRole());
+        boolean isPolice = "POLICE_OFFICER".equals(principal.getRole()) || "POLICE_ADMIN".equals(principal.getRole())
+                || "SYSTEM_ADMIN".equals(principal.getRole());
         if (!isClaimant && !isPolice) {
             throw new ForbiddenException("You do not have permission to view this claim");
         }
     }
 
     private void assertPolice(UserPrincipal principal) {
-        boolean isPolice = "POLICE_OFFICER".equals(principal.getRole()) || "POLICE_ADMIN".equals(principal.getRole()) || "SYSTEM_ADMIN".equals(principal.getRole());
+        boolean isPolice = "POLICE_OFFICER".equals(principal.getRole()) || "POLICE_ADMIN".equals(principal.getRole())
+                || "SYSTEM_ADMIN".equals(principal.getRole());
         if (!isPolice) {
             throw new ForbiddenException("This action is restricted to police personnel");
         }

@@ -7,6 +7,7 @@ import LocationPicker from "../../components/maps/LocationPicker.jsx";
 import { categoryService } from "../../services/categoryService";
 import { lostItemService } from "../../services/lostItemService";
 import { extractErrorMessage } from "../../services/apiClient";
+import { itemError } from "../../utils/validators";
 
 const today = new Date().toISOString().slice(0, 10);
 
@@ -26,7 +27,7 @@ export default function ReportLostItemPage() {
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    categoryService.getCategories().then(setCategories).catch(() => {});
+    categoryService.getCategories().then(setCategories).catch(() => { });
   }, []);
 
   const update = (field) => (e) => setForm({ ...form, [field]: e.target.value });
@@ -34,6 +35,11 @@ export default function ReportLostItemPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError(null);
+    const problem = itemError({ ...form, city: location.city });
+    if (problem) {
+      setError(problem);
+      return;
+    }
     if (!location.latitude || !location.longitude) {
       setError("Please pick the approximate location on the map.");
       return;
@@ -103,6 +109,10 @@ export default function ReportLostItemPage() {
             value={form.identifyingDetails}
             onChange={update("identifyingDetails")}
           />
+        </div>
+        <div className="text-muted-soft" style={{ fontSize: "0.75rem" }}>
+          Used to help police recognise your item. Only you and police can see this. Matching uses the category,
+          date, place, colour, brand and description above; serial numbers are checked by hand later.
         </div>
 
         <div className="mb-3">

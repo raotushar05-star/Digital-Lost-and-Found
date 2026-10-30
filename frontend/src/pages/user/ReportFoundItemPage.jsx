@@ -22,7 +22,7 @@ export default function ReportFoundItemPage() {
   const [done, setDone] = useState(null);
 
   useEffect(() => {
-    categoryService.getCategories().then(setCategories).catch(() => {});
+    categoryService.getCategories().then(setCategories).catch(() => { });
   }, []);
 
   useEffect(() => {
@@ -42,6 +42,11 @@ export default function ReportFoundItemPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError(null);
+    const problem = itemError({ ...form, city: location.city });
+    if (problem) {
+      setError(problem);
+      return;
+    }
     if (!location.latitude || !location.longitude || !location.city) {
       setError("Please enter the city and pick the approximate location on the map.");
       return;
