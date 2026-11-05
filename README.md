@@ -153,14 +153,11 @@ a reasonable, documented choice:
 
 ## Known limitations
 
-- No automated test suite is included (out of scope for this pass).
 - No CI/CD, containerized deployment for the backend/frontend themselves (only
   the database has a compose file), or production-grade secrets management —
   add these before any real deployment.
 - File uploads are stored on local disk (`UPLOAD_DIR`), suitable for development;
   swap in object storage (S3-compatible) for production.
-- This code has not been compiled/run in the environment it was authored in (no
-  network access to fetch Maven/npm dependencies there); it has been reviewed
-  with static consistency checks (DTO field names, enum values, import
+- It has been reviewed with static consistency checks (DTO field names, enum values, import
   resolution) but you should run `mvn compile` and `npm run build` locally as a
   first step.
