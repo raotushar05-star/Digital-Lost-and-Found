@@ -4,6 +4,7 @@ import { useAuth } from "../../context/AuthContext.jsx";
 import ErrorAlert from "../../components/common/ErrorAlert.jsx";
 import { extractErrorMessage } from "../../services/apiClient";
 import PasswordInput from "../../components/common/PasswordInput.jsx";
+import React, { useEffect, useRef, useState } from "react";
 
 const SIGNIN_OPTIONS = {
   citizen: {
@@ -37,6 +38,9 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState(null);
   const [submitting, setSubmitting] = useState(false);
+
+  const [notice] = useState(() => sessionStorage.getItem("lf_notice"));
+  useEffect(() => { sessionStorage.removeItem("lf_notice"); }, []);
 
   const option = SIGNIN_OPTIONS[mode];
 
@@ -101,6 +105,7 @@ export default function LoginPage() {
         </ul>
 
         <form onSubmit={handleSubmit}>
+          {notice && <div className="alert alert-info">{notice}</div>}
           <ErrorAlert message={error} />
           <div className="mb-3">
             <label className="form-label">Email or phone</label>

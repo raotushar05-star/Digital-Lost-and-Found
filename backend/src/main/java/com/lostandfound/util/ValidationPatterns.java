@@ -11,7 +11,7 @@ public final class ValidationPatterns {
 
     public static final String EMAIL = EMAIL_CORE;
     public static final String EMAIL_OPTIONAL = "^$|" + EMAIL_CORE;
-    public static final String PERSON_NAME = "^[\\p{L}][\\p{L} .'-]{1,99}$";
+    public static final String PERSON_NAME = "^[\\p{L}][\\p{L} .'-]{1,59}$";
     public static final String PHONE_10 = "^[0-9]{10}$";
     public static final String PASSWORD =
             "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[^A-Za-z0-9]).{8,64}$";

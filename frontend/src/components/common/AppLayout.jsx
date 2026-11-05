@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { NavLink, Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext.jsx";
 import { notificationService } from "../../services/notificationService";
+import useIdleLogout from "../../hooks/useIdleLogout.js";
 
 const USER_NAV = [
   { to: "/dashboard", label: "Dashboard" },
@@ -41,6 +42,15 @@ export default function AppLayout({ children }) {
   const [unread, setUnread] = useState(0);
   const isSystemAdmin = user?.role === "SYSTEM_ADMIN";
 
+  const idle = useIdleLogout({
+    enabled: isAuthenticated,
+    idleMinutes: isPolice || isSystemAdmin ? 10 : 30,
+    onTimeout: () => {
+      sessionStorage.setItem("lf_notice", "You were signed out because of inactivity.");
+      logout();
+    }
+  });
+
   useEffect(() => {
     if (!isAuthenticated || isSystemAdmin) return;
     let active = true;
@@ -49,7 +59,7 @@ export default function AppLayout({ children }) {
         if (!active) return;
         const count = (data.content || []).filter((n) => !n.isRead).length;
         setUnread(count);
-      }).catch(() => {});
+      }).catch(() => { });
     };
     updateUnread();
     const intervalId = window.setInterval(updateUnread, 30000);
@@ -145,6 +155,13 @@ export default function AppLayout({ children }) {
           )}
         </div>
       </header>
+
+      {idle.secondsLeft !== null && (
+        <div className="alert alert-warning rounded-0 mb-0 d-flex justify-content-between align-items-center">
+          <span>You will be signed out in {idle.secondsLeft}s because of inactivity.</span>
+          <button className="btn btn-sm btn-primary" onClick={idle.stay}>Stay signed in</button>
+        </div>
+      )}
 
       <div className="app-body">
         {isAuthenticated && (

@@ -7,6 +7,9 @@ import LocationPicker from "../../components/maps/LocationPicker.jsx";
 import { categoryService } from "../../services/categoryService";
 import { foundReportService } from "../../services/foundReportService";
 import { extractErrorMessage } from "../../services/apiClient";
+import { duplicateService } from "../../services/duplicateService";
+import DuplicateWarning from "../../components/items/DuplicateWarning.jsx";
+import { itemError } from "../../utils/validators";
 
 const today = new Date().toISOString().slice(0, 10);
 
@@ -20,6 +23,7 @@ export default function ReportFoundItemPage() {
   const [error, setError] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(null);
+  const [duplicates, setDuplicates] = useState(null);
 
   useEffect(() => {
     categoryService.getCategories().then(setCategories).catch(() => { });
@@ -39,24 +43,28 @@ export default function ReportFoundItemPage() {
     setPhotoPreview(file ? URL.createObjectURL(file) : null);
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const handleSubmit = async (e, skipCheck = false) => {
+    if (e) e.preventDefault();
     setError(null);
     const problem = itemError({ ...form, city: location.city });
-    if (problem) {
-      setError(problem);
-      return;
-    }
-    if (!location.latitude || !location.longitude || !location.city) {
-      setError("Please enter the city and pick the approximate location on the map.");
-      return;
-    }
-    if (!photoFile) {
-      setError("A photo of the found item is required — it helps prove what you found and protects you if ownership is ever questioned.");
-      return;
-    }
+    if (problem) { setError(problem); return; }
+    if (!photoFile) { setError("Please select a photo of the item."); return; }
+    if (!location.latitude || !location.longitude) { setError("Please pick the approximate location on the map."); return; }
+    if (!location.city) { setError("Please enter the city for this location."); return; }
     setSubmitting(true);
     try {
+      if (!skipCheck) {
+        // A courtesy check only: if it fails, the report still goes through
+        const hits = await duplicateService
+          .checkFound({
+            categoryId: form.categoryId, date: form.foundDate,
+            latitude: location.latitude, longitude: location.longitude,
+            description: form.description, brand: form.brand
+          })
+          .catch(() => []);
+        if (hits.length > 0) { setDuplicates(hits); return; }
+      }
+      setDuplicates(null);
       const res = await foundReportService.create({ ...form, location }, photoFile);
       setDone(res);
     } catch (err) {
@@ -162,7 +170,10 @@ export default function ReportFoundItemPage() {
           />
           <LocationPicker value={location} onChange={setLocation} />
         </div>
-
+        {duplicates && (
+          <DuplicateWarning hits={duplicates} busy={submitting}
+            onProceed={() => handleSubmit(null, true)} onCancel={() => setDuplicates(null)} />
+        )}
         <button className="btn btn-primary" disabled={submitting}>
           {submitting ? "Submitting…" : "Submit report"}
         </button>

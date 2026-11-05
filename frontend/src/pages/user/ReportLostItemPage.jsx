@@ -8,6 +8,8 @@ import { categoryService } from "../../services/categoryService";
 import { lostItemService } from "../../services/lostItemService";
 import { extractErrorMessage } from "../../services/apiClient";
 import { itemError } from "../../utils/validators";
+import { duplicateService } from "../../services/duplicateService";
+import DuplicateWarning from "../../components/items/DuplicateWarning.jsx";
 
 const today = new Date().toISOString().slice(0, 10);
 
@@ -31,25 +33,29 @@ export default function ReportLostItemPage() {
   }, []);
 
   const update = (field) => (e) => setForm({ ...form, [field]: e.target.value });
+  const [duplicates, setDuplicates] = useState(null);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const handleSubmit = async (e, skipCheck = false) => {
+    if (e) e.preventDefault();
     setError(null);
     const problem = itemError({ ...form, city: location.city });
-    if (problem) {
-      setError(problem);
-      return;
-    }
-    if (!location.latitude || !location.longitude) {
-      setError("Please pick the approximate location on the map.");
-      return;
-    }
-    if (!location.city) {
-      setError("Please enter the city for this location.");
-      return;
-    }
+    if (problem) { setError(problem); return; }
+    if (!location.latitude || !location.longitude) { setError("Please pick the approximate location on the map."); return; }
+    if (!location.city) { setError("Please enter the city for this location."); return; }
     setSubmitting(true);
     try {
+      if (!skipCheck) {
+        // A courtesy check only: if it fails, the report still goes through
+        const hits = await duplicateService
+          .checkLost({
+            categoryId: form.categoryId, date: form.lostDate,
+            latitude: location.latitude, longitude: location.longitude,
+            description: form.description, brand: form.brand
+          })
+          .catch(() => []);
+        if (hits.length > 0) { setDuplicates(hits); return; }
+      }
+      setDuplicates(null);
       const res = await lostItemService.create({ ...form, location });
       navigate(`/lost-items/${res.lostItemId}`);
     } catch (err) {
@@ -131,7 +137,10 @@ export default function ReportLostItemPage() {
           />
           <LocationPicker value={location} onChange={setLocation} />
         </div>
-
+        {duplicates && (
+          <DuplicateWarning hits={duplicates} busy={submitting}
+            onProceed={() => handleSubmit(null, true)} onCancel={() => setDuplicates(null)} />
+        )}
         <button className="btn btn-primary" disabled={submitting}>
           {submitting ? "Submitting…" : "Submit report"}
         </button>
