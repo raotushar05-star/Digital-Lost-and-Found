@@ -1,10 +1,9 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext.jsx";
 import ErrorAlert from "../../components/common/ErrorAlert.jsx";
 import { extractErrorMessage } from "../../services/apiClient";
 import PasswordInput from "../../components/common/PasswordInput.jsx";
-import React, { useEffect, useRef, useState } from "react";
 
 const SIGNIN_OPTIONS = {
   citizen: {
