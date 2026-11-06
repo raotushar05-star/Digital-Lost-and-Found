@@ -6,13 +6,10 @@ import LoadingSpinner from "../../components/common/LoadingSpinner.jsx";
 import EmptyState from "../../components/common/EmptyState.jsx";
 import StatusStamp from "../../components/common/StatusStamp.jsx";
 import { policeService } from "../../services/policeService";
-import { stationService } from "../../services/stationService";
 import { useAuth } from "../../context/AuthContext.jsx";
 import { formatDate } from "../../utils/format";
 
 export default function FoundItemInventoryPage() {
-  const { profile, isAdmin } = useAuth();
-  const [stations, setStations] = useState([]);
   const [stationId, setStationId] = useState("");
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -44,13 +41,6 @@ export default function FoundItemInventoryPage() {
         title="Found item inventory"
         actions={
           <>
-            {isAdmin && stations.length > 0 && (
-              <select className="form-select form-select-sm" style={{ width: 200 }} value={stationId} onChange={(e) => setStationId(e.target.value)}>
-                {stations.map((s) => (
-                  <option key={s.stationId} value={s.stationId}>{s.stationName}</option>
-                ))}
-              </select>
-            )}
             <select className="form-select form-select-sm" style={{ width: 160 }} value={filter} onChange={(e) => setFilter(e.target.value)}>
               <option value="ALL">All statuses</option>
               <option value="PENDING">Pending verification</option>

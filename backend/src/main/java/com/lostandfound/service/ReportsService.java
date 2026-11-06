@@ -22,90 +22,108 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class ReportsService {
 
-    private final LostItemRepository lostItemRepository;
-    private final FoundItemRepository foundItemRepository;
-    private final ClaimRepository claimRepository;
-    private final HandoverRecordRepository handoverRecordRepository;
-    private final PoliceStationRepository stationRepository;
+        private final LostItemRepository lostItemRepository;
+        private final FoundItemRepository foundItemRepository;
+        private final ClaimRepository claimRepository;
+        private final HandoverRecordRepository handoverRecordRepository;
+        private final PoliceStationRepository stationRepository;
 
-    @Transactional(readOnly = true)
-    public ReportsSummaryDto getSummary(UUID stationId, LocalDate dateFrom, LocalDate dateTo) {
-        List<FoundItem> foundItems = foundItemRepository.findAll().stream()
-                .filter(fi -> stationId == null || fi.getStation().getStationId().equals(stationId))
-                .filter(fi -> inRange(fi.getCreatedAt(), dateFrom, dateTo))
-                .collect(Collectors.toList());
+        @Transactional(readOnly = true)
+        public ReportsSummaryDto getSummary(UUID stationId, LocalDate dateFrom, LocalDate dateTo) {
+                List<FoundItem> foundItems = foundItemRepository.findAll().stream()
+                                .filter(fi -> stationId == null || fi.getStation().getStationId().equals(stationId))
+                                .filter(fi -> inRange(fi.getCreatedAt(), dateFrom, dateTo))
+                                .collect(Collectors.toList());
 
-        long lostItems = lostItemRepository.findAll().stream()
-                .filter(li -> inRange(li.getCreatedAt(), dateFrom, dateTo))
-                .count();
+                long lostItems = lostItemRepository.findAll().stream()
+                                .filter(li -> stationId == null
+                                                || (li.getAssignedStation() != null && li.getAssignedStation()
+                                                                .getStationId().equals(stationId)))
+                                .filter(li -> inRange(li.getCreatedAt(), dateFrom, dateTo))
+                                .count();
 
-        long verifiedItems = foundItems.stream().filter(fi -> fi.getVerificationStatus() == FoundItemVerificationStatus.VERIFIED).count();
+                long verifiedItems = foundItems.stream()
+                                .filter(fi -> fi.getVerificationStatus() == FoundItemVerificationStatus.VERIFIED)
+                                .count();
 
-        long claims = claimRepository.findAll().stream()
-                .filter(c -> stationId == null || c.getFoundItem().getStation().getStationId().equals(stationId))
-                .filter(c -> inRange(c.getCreatedAt(), dateFrom, dateTo))
-                .count();
+                long claims = claimRepository.findAll().stream()
+                                .filter(c -> stationId == null
+                                                || c.getFoundItem().getStation().getStationId().equals(stationId))
+                                .filter(c -> inRange(c.getCreatedAt(), dateFrom, dateTo))
+                                .count();
 
-        long recoveredItems = handoverRecordRepository.findAll().stream()
-                .filter(h -> stationId == null || h.getFoundItem().getStation().getStationId().equals(stationId))
-                .filter(h -> inRange(h.getHandoverDate(), dateFrom, dateTo))
-                .count();
+                long recoveredItems = handoverRecordRepository.findAll().stream()
+                                .filter(h -> stationId == null
+                                                || h.getFoundItem().getStation().getStationId().equals(stationId))
+                                .filter(h -> inRange(h.getHandoverDate(), dateFrom, dateTo))
+                                .count();
 
-        double recoveryRate = foundItems.isEmpty() ? 0.0 : round2((double) recoveredItems / foundItems.size() * 100.0);
+                double recoveryRate = foundItems.isEmpty() ? 0.0
+                                : round2((double) recoveredItems / foundItems.size() * 100.0);
 
-        return ReportsSummaryDto.builder()
-                .lostItems(lostItems)
-                .foundItems(foundItems.size())
-                .verifiedItems(verifiedItems)
-                .claims(claims)
-                .recoveredItems(recoveredItems)
-                .recoveryRate(recoveryRate)
-                .build();
-    }
+                return ReportsSummaryDto.builder()
+                                .lostItems(lostItems)
+                                .foundItems(foundItems.size())
+                                .verifiedItems(verifiedItems)
+                                .claims(claims)
+                                .recoveredItems(recoveredItems)
+                                .recoveryRate(recoveryRate)
+                                .build();
+        }
 
-    @Transactional(readOnly = true)
-    public List<StationReportDto> getStationReports(LocalDate dateFrom, LocalDate dateTo) {
-        List<PoliceStation> stations = stationRepository.findByIsActiveTrue();
-        List<FoundItem> allFoundItems = foundItemRepository.findAll();
-        List<HandoverRecord> allHandovers = handoverRecordRepository.findAll();
+        @Transactional(readOnly = true)
+        public List<StationReportDto> getStationReports(UUID stationId, LocalDate dateFrom, LocalDate dateTo) {
+                List<PoliceStation> stations = stationRepository.findByIsActiveTrue().stream()
+                                .filter(s -> stationId == null || s.getStationId().equals(stationId))
+                                .collect(Collectors.toList());
+                List<FoundItem> allFoundItems = foundItemRepository.findAll();
+                List<HandoverRecord> allHandovers = handoverRecordRepository.findAll();
 
-        return stations.stream().map(station -> {
-            List<FoundItem> stationItems = allFoundItems.stream()
-                    .filter(fi -> fi.getStation().getStationId().equals(station.getStationId()))
-                    .filter(fi -> inRange(fi.getCreatedAt(), dateFrom, dateTo))
-                    .collect(Collectors.toList());
-            long verified = stationItems.stream().filter(fi -> fi.getVerificationStatus() == FoundItemVerificationStatus.VERIFIED).count();
-            long claims = claimRepository.findAll().stream()
-                    .filter(c -> c.getFoundItem().getStation().getStationId().equals(station.getStationId()))
-                    .filter(c -> inRange(c.getCreatedAt(), dateFrom, dateTo))
-                    .count();
-            long recovered = allHandovers.stream()
-                    .filter(h -> h.getFoundItem().getStation().getStationId().equals(station.getStationId()))
-                    .filter(h -> inRange(h.getHandoverDate(), dateFrom, dateTo))
-                    .count();
-            double recoveryRate = stationItems.isEmpty() ? 0.0 : round2((double) recovered / stationItems.size() * 100.0);
+                return stations.stream().map(station -> {
+                        List<FoundItem> stationItems = allFoundItems.stream()
+                                        .filter(fi -> fi.getStation().getStationId().equals(station.getStationId()))
+                                        .filter(fi -> inRange(fi.getCreatedAt(), dateFrom, dateTo))
+                                        .collect(Collectors.toList());
+                        long verified = stationItems.stream().filter(
+                                        fi -> fi.getVerificationStatus() == FoundItemVerificationStatus.VERIFIED)
+                                        .count();
+                        long claims = claimRepository.findAll().stream()
+                                        .filter(c -> c.getFoundItem().getStation().getStationId()
+                                                        .equals(station.getStationId()))
+                                        .filter(c -> inRange(c.getCreatedAt(), dateFrom, dateTo))
+                                        .count();
+                        long recovered = allHandovers.stream()
+                                        .filter(h -> h.getFoundItem().getStation().getStationId()
+                                                        .equals(station.getStationId()))
+                                        .filter(h -> inRange(h.getHandoverDate(), dateFrom, dateTo))
+                                        .count();
+                        double recoveryRate = stationItems.isEmpty() ? 0.0
+                                        : round2((double) recovered / stationItems.size() * 100.0);
 
-            return StationReportDto.builder()
-                    .stationId(station.getStationId())
-                    .stationName(station.getStationName())
-                    .foundItems(stationItems.size())
-                    .verifiedItems(verified)
-                    .claims(claims)
-                    .recoveredItems(recovered)
-                    .recoveryRate(recoveryRate)
-                    .build();
-        }).collect(Collectors.toList());
-    }
+                        return StationReportDto.builder()
+                                        .stationId(station.getStationId())
+                                        .stationName(station.getStationName())
+                                        .foundItems(stationItems.size())
+                                        .verifiedItems(verified)
+                                        .claims(claims)
+                                        .recoveredItems(recovered)
+                                        .recoveryRate(recoveryRate)
+                                        .build();
+                }).collect(Collectors.toList());
+        }
 
-    private boolean inRange(LocalDateTime timestamp, LocalDate from, LocalDate to) {
-        if (timestamp == null) return true;
-        LocalDate date = timestamp.toLocalDate();
-        if (from != null && date.isBefore(from)) return false;
-        if (to != null && date.isAfter(to)) return false;
-        return true;
-    }
+        private boolean inRange(LocalDateTime timestamp, LocalDate from, LocalDate to) {
+                if (timestamp == null)
+                        return true;
+                LocalDate date = timestamp.toLocalDate();
+                if (from != null && date.isBefore(from))
+                        return false;
+                if (to != null && date.isAfter(to))
+                        return false;
+                return true;
+        }
 
-    private double round2(double value) {
-        return Math.round(value * 100.0) / 100.0;
-    }
+        private double round2(double value) {
+                return Math.round(value * 100.0) / 100.0;
+        }
 }

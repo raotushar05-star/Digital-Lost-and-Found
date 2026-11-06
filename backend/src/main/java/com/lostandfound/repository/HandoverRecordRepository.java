@@ -9,6 +9,10 @@ import java.util.UUID;
 
 public interface HandoverRecordRepository extends JpaRepository<HandoverRecord, UUID> {
     Optional<HandoverRecord> findByFoundItem_FoundItemId(UUID foundItemId);
+
     Optional<HandoverRecord> findByClaim_ClaimId(UUID claimId);
+
     long count();
+
+    long countByFoundItem_Station_StationId(UUID stationId);
 }

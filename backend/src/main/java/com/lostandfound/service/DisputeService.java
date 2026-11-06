@@ -17,6 +17,8 @@ import com.lostandfound.mapper.DisputeMapper;
 import com.lostandfound.repository.ClaimDisputeRepository;
 import com.lostandfound.repository.ClaimRepository;
 import com.lostandfound.repository.FoundItemRepository;
+import com.lostandfound.security.StationAccess;
+
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -44,7 +46,10 @@ public class DisputeService {
     private final DisputeMapper disputeMapper;
 
     @Transactional(readOnly = true)
-    public List<DisputeDto> getDisputesForFoundItem(UUID foundItemId) {
+    public List<DisputeDto> getDisputesForFoundItem(UUID foundItemId, User officer) {
+        FoundItem foundItem = foundItemRepository.findById(foundItemId)
+                .orElseThrow(() -> new ResourceNotFoundException("Found item not found: " + foundItemId));
+        StationAccess.assertOwnStation(officer, foundItem.getStation());
         return disputeRepository.findByFoundItem_FoundItemIdOrderByCreatedAtDesc(foundItemId).stream()
                 .map(disputeMapper::toDto)
                 .collect(Collectors.toList());
@@ -54,6 +59,7 @@ public class DisputeService {
     public DisputeDto create(UUID foundItemId, User officer, DisputeCreateRequest request) {
         FoundItem foundItem = foundItemRepository.findById(foundItemId)
                 .orElseThrow(() -> new ResourceNotFoundException("Found item not found: " + foundItemId));
+        StationAccess.assertOwnStation(officer, foundItem.getStation());
         Claim claim = claimRepository.findById(request.getClaimId())
                 .orElseThrow(() -> new ResourceNotFoundException("Claim not found: " + request.getClaimId()));
         if (!claim.getFoundItem().getFoundItemId().equals(foundItemId)) {
@@ -71,7 +77,8 @@ public class DisputeService {
 
         claim.setStatus(ClaimStatus.DISPUTED);
         claimRepository.save(claim);
-        caseService.findAndTransition(foundItem, CaseStatus.UNDER_VERIFICATION, officer, "Dispute raised: " + request.getReason());
+        caseService.findAndTransition(foundItem, CaseStatus.UNDER_VERIFICATION, officer,
+                "Dispute raised: " + request.getReason());
 
         notificationService.notify(claim.getClaimant(), NotificationType.DISPUTE_UPDATE,
                 "A dispute has been raised on your claim",
@@ -86,6 +93,7 @@ public class DisputeService {
     public DisputeDto update(UUID disputeId, User officer, DisputeUpdateRequest request) {
         ClaimDispute dispute = disputeRepository.findById(disputeId)
                 .orElseThrow(() -> new ResourceNotFoundException("Dispute not found: " + disputeId));
+        StationAccess.assertOwnStation(officer, dispute.getFoundItem().getStation());
 
         DisputeStatus status;
         try {
@@ -101,7 +109,8 @@ public class DisputeService {
             dispute.setResolvedAt(LocalDateTime.now());
             notificationService.notify(dispute.getClaim().getClaimant(), NotificationType.DISPUTE_UPDATE,
                     "The dispute on your claim has been resolved",
-                    request.getResolution() != null ? request.getResolution() : "Police have completed their review. A final ownership decision will follow.",
+                    request.getResolution() != null ? request.getResolution()
+                            : "Police have completed their review. A final ownership decision will follow.",
                     null, null);
         }
         dispute = disputeRepository.save(dispute);

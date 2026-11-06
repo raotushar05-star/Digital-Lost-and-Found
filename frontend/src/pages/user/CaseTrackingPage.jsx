@@ -1,4 +1,3 @@
-import DownloadServerPdfButton from "../../components/common/DownloadServerPdfButton.jsx";
 import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import AppLayout from "../../components/common/AppLayout.jsx";

@@ -26,11 +26,12 @@ public class PoliceDisputeController {
 
     @GetMapping("/found-items/{foundItemId}/disputes")
     public List<DisputeDto> getDisputes(@PathVariable UUID foundItemId) {
-        return disputeService.getDisputesForFoundItem(foundItemId);
+        return disputeService.getDisputesForFoundItem(foundItemId, userService.getCurrentUser());
     }
 
     @PostMapping("/found-items/{foundItemId}/disputes")
-    public ResponseEntity<DisputeDto> create(@PathVariable UUID foundItemId, @Valid @RequestBody DisputeCreateRequest request) {
+    public ResponseEntity<DisputeDto> create(@PathVariable UUID foundItemId,
+            @Valid @RequestBody DisputeCreateRequest request) {
         DisputeDto dto = disputeService.create(foundItemId, userService.getCurrentUser(), request);
         return ResponseEntity.status(HttpStatus.CREATED).body(dto);
     }

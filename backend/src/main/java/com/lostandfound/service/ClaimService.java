@@ -131,6 +131,9 @@ public class ClaimService {
     @Transactional(readOnly = true)
     public List<ClaimSummaryDto> getClaimsForFoundItem(UUID foundItemId, UserPrincipal principal) {
         assertPolice(principal);
+        FoundItem foundItem = foundItemRepository.findById(foundItemId)
+                .orElseThrow(() -> new ResourceNotFoundException("Found item not found: " + foundItemId));
+        StationAccess.assertOwnStation(principal, foundItem.getStation());
         return claimRepository.findByFoundItem_FoundItemIdOrderByCreatedAtDesc(foundItemId).stream()
                 .map(claimMapper::toSummaryDto)
                 .collect(Collectors.toList());
@@ -148,6 +151,7 @@ public class ClaimService {
         if (!isClaimant && !isPolice) {
             throw new ForbiddenException("You do not have permission to view this claim");
         }
+        StationAccess.assertOwnStation(principal, claim.getFoundItem().getStation());
     }
 
     private void assertPolice(UserPrincipal principal) {

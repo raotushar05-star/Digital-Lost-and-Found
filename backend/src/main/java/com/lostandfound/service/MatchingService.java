@@ -1,5 +1,6 @@
 package com.lostandfound.service;
 
+import com.lostandfound.security.StationAccess;
 import com.lostandfound.dto.match.MatchDto;
 import com.lostandfound.entity.*;
 import com.lostandfound.entity.enums.*;
@@ -27,8 +28,10 @@ import java.util.stream.Collectors;
 
 /**
  * Smart Matching Module: generates POTENTIAL matches only, using category,
- * description, date, location, color, and brand. Never auto-confirms ownership -
- * confirmation always requires a claim plus an explicit police verification decision.
+ * description, date, location, color, and brand. Never auto-confirms ownership
+ * -
+ * confirmation always requires a claim plus an explicit police verification
+ * decision.
  */
 @Service
 @RequiredArgsConstructor
@@ -56,9 +59,13 @@ public class MatchingService {
         LostItem lostItem = lostItemRepository.findById(lostItemId)
                 .orElseThrow(() -> new ResourceNotFoundException("Lost item not found: " + lostItemId));
         boolean isOwner = lostItem.getOwner().getUserId().equals(principal.getUserId());
-        boolean isPolice = "POLICE_OFFICER".equals(principal.getRole()) || "POLICE_ADMIN".equals(principal.getRole()) || "SYSTEM_ADMIN".equals(principal.getRole());
+        boolean isPolice = "POLICE_OFFICER".equals(principal.getRole()) || "POLICE_ADMIN".equals(principal.getRole())
+                || "SYSTEM_ADMIN".equals(principal.getRole());
         if (!isOwner && !isPolice) {
             throw new ForbiddenException("You do not have permission to view matches for this item");
+        }
+        if (isPolice && !isOwner && lostItem.getAssignedStation() != null) {
+            StationAccess.assertOwnStation(principal, lostItem.getAssignedStation());
         }
         return matchRepository.findByLostItem_LostItemIdOrderByMatchScoreDesc(lostItemId).stream()
                 .map(matchMapper::toDto)
@@ -75,7 +82,8 @@ public class MatchingService {
 
         int created = 0;
         for (FoundItem foundItem : candidates) {
-            if (matchRepository.existsByLostItem_LostItemIdAndFoundItem_FoundItemId(lostItem.getLostItemId(), foundItem.getFoundItemId())) {
+            if (matchRepository.existsByLostItem_LostItemIdAndFoundItem_FoundItemId(lostItem.getLostItemId(),
+                    foundItem.getFoundItemId())) {
                 continue;
             }
             ScoreResult result = score(lostItem, foundItem);
@@ -89,14 +97,17 @@ public class MatchingService {
 
     @Transactional
     public int generateForFoundItem(FoundItem foundItem) {
-        List<LostItem> candidates = Arrays.stream(new LostItemStatus[]{LostItemStatus.REPORTED, LostItemStatus.RECEIVED, LostItemStatus.POTENTIAL_MATCH})
+        List<LostItem> candidates = Arrays
+                .stream(new LostItemStatus[] { LostItemStatus.REPORTED, LostItemStatus.RECEIVED,
+                        LostItemStatus.POTENTIAL_MATCH })
                 .flatMap(status -> lostItemRepository.findByStatus(status).stream())
                 .filter(li -> li.getCategory().getCategoryId().equals(foundItem.getCategory().getCategoryId()))
                 .collect(Collectors.toList());
 
         int created = 0;
         for (LostItem lostItem : candidates) {
-            if (matchRepository.existsByLostItem_LostItemIdAndFoundItem_FoundItemId(lostItem.getLostItemId(), foundItem.getFoundItemId())) {
+            if (matchRepository.existsByLostItem_LostItemIdAndFoundItem_FoundItemId(lostItem.getLostItemId(),
+                    foundItem.getFoundItemId())) {
                 continue;
             }
             ScoreResult result = score(lostItem, foundItem);
@@ -111,7 +122,8 @@ public class MatchingService {
     @Transactional
     public int generateGlobal() {
         int total = 0;
-        for (LostItemStatus status : new LostItemStatus[]{LostItemStatus.REPORTED, LostItemStatus.RECEIVED, LostItemStatus.POTENTIAL_MATCH}) {
+        for (LostItemStatus status : new LostItemStatus[] { LostItemStatus.REPORTED, LostItemStatus.RECEIVED,
+                LostItemStatus.POTENTIAL_MATCH }) {
             for (LostItem lostItem : lostItemRepository.findByStatus(status)) {
                 total += generateForLostItem(lostItem);
             }
@@ -132,7 +144,8 @@ public class MatchingService {
         User owner = lostItem.getOwner();
         notificationService.notify(owner, NotificationType.MATCH_FOUND,
                 "Possible match found for your lost item",
-                "A found item matching your \"" + lostItem.getDescription() + "\" report may have been located. Review the potential match and submit a claim if it is yours.",
+                "A found item matching your \"" + lostItem.getDescription()
+                        + "\" report may have been located. Review the potential match and submit a claim if it is yours.",
                 null, match);
         match.setStatus(MatchStatus.NOTIFIED);
         matchRepository.save(match);
@@ -140,7 +153,8 @@ public class MatchingService {
         if (lostItem.getStatus() == LostItemStatus.REPORTED || lostItem.getStatus() == LostItemStatus.RECEIVED) {
             lostItem.setStatus(LostItemStatus.POTENTIAL_MATCH);
             lostItemRepository.save(lostItem);
-            caseService.findAndTransition(lostItem, CaseStatus.POTENTIAL_MATCH, owner, "Potential match identified by the system");
+            caseService.findAndTransition(lostItem, CaseStatus.POTENTIAL_MATCH, owner,
+                    "Potential match identified by the system");
         }
     }
 
@@ -167,7 +181,8 @@ public class MatchingService {
 
         double distanceKm = LocationService.distanceKm(
                 lostItem.getLocation().getLatitude().doubleValue(), lostItem.getLocation().getLongitude().doubleValue(),
-                foundItem.getLocation().getLatitude().doubleValue(), foundItem.getLocation().getLongitude().doubleValue());
+                foundItem.getLocation().getLatitude().doubleValue(),
+                foundItem.getLocation().getLongitude().doubleValue());
         double locationScore;
         if (distanceKm <= 1) {
             locationScore = 25;
@@ -207,12 +222,14 @@ public class MatchingService {
     }
 
     private double keywordOverlapScore(String a, String b) {
-        if (a == null || b == null) return 0;
+        if (a == null || b == null)
+            return 0;
         Set<String> wordsA = new HashSet<>(Arrays.asList(a.toLowerCase().split("\\W+")));
         Set<String> wordsB = new HashSet<>(Arrays.asList(b.toLowerCase().split("\\W+")));
         wordsA.removeIf(w -> w.length() < 3);
         wordsB.removeIf(w -> w.length() < 3);
-        if (wordsA.isEmpty() || wordsB.isEmpty()) return 0;
+        if (wordsA.isEmpty() || wordsB.isEmpty())
+            return 0;
         Set<String> intersection = new HashSet<>(wordsA);
         intersection.retainAll(wordsB);
         Set<String> union = new HashSet<>(wordsA);
@@ -223,6 +240,7 @@ public class MatchingService {
     private static class ScoreResult {
         final double score;
         final String reason;
+
         ScoreResult(double score, String reason) {
             this.score = score;
             this.reason = reason;

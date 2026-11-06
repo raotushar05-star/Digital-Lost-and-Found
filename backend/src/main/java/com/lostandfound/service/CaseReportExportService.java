@@ -1,5 +1,6 @@
 package com.lostandfound.service;
 
+import com.lostandfound.security.StationAccess;
 import com.lostandfound.dto.casedto.CaseFileDto;
 import com.lostandfound.dto.reports.ReportsSummaryDto;
 import com.lostandfound.dto.reports.StationReportDto;
@@ -13,7 +14,8 @@ import java.util.UUID;
 
 /**
  * Orchestrates PDF exports. Authorization and station scoping are delegated to
- * CaseFileService, so the PDF can never contain more than the JSON endpoints already expose.
+ * CaseFileService, so the PDF can never contain more than the JSON endpoints
+ * already expose.
  */
 @Service
 @RequiredArgsConstructor
@@ -23,27 +25,33 @@ public class CaseReportExportService {
     private final ReportsService reportsService;
     private final CaseFilePdfService pdfService;
 
-    public record PdfFile(String filename, byte[] content) {}
+    public record PdfFile(String filename, byte[] content) {
+    }
 
-    /** Individual case report. Citizens (owner/finder) get the non-restricted view. */
+    /**
+     * Individual case report. Citizens (owner/finder) get the non-restricted view.
+     */
     public PdfFile exportCase(UUID caseId, UserPrincipal principal) {
         CaseFileDto caseFile = caseFileService.getById(caseId, principal);
         return new PdfFile("findline-case-" + slug(caseFile.getCaseNumber()) + ".pdf",
                 pdfService.renderSingle(caseFile));
     }
 
-    /** Bulk report: every case visible to this police user within the date range. */
+    /**
+     * Bulk report: every case visible to this police user within the date range.
+     */
     public PdfFile exportAllCases(UserPrincipal principal, LocalDate dateFrom, LocalDate dateTo) {
         List<CaseFileDto> caseFiles = caseFileService.listForPolice(principal, dateFrom, dateTo);
 
         boolean systemAdmin = "SYSTEM_ADMIN".equals(principal.getRole());
         boolean stationAdmin = "POLICE_ADMIN".equals(principal.getRole());
 
-        // Officers/station admins: summary scoped to their own station. System admin: all stations.
-        UUID scope = systemAdmin ? null : principal.getStationId();
+        // Officers/station admins: summary scoped to their own station. System admin:
+        // all stations.
+        UUID scope = StationAccess.scopeFor(principal); // null for system admin
         ReportsSummaryDto summary = reportsService.getSummary(scope, dateFrom, dateTo);
         List<StationReportDto> stationReports = (systemAdmin || stationAdmin)
-                ? reportsService.getStationReports(dateFrom, dateTo)
+                ? reportsService.getStationReports(scope, dateFrom, dateTo)
                 : List.of();
 
         String period = describePeriod(dateFrom, dateTo);
@@ -55,7 +63,8 @@ public class CaseReportExportService {
     }
 
     private static String describePeriod(LocalDate from, LocalDate to) {
-        if (from == null && to == null) return "All dates";
+        if (from == null && to == null)
+            return "All dates";
         return (from == null ? "Start" : from.toString()) + " to " + (to == null ? "Present" : to.toString());
     }
 
