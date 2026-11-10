@@ -10,6 +10,7 @@ import { extractErrorMessage } from "../../services/apiClient";
 import { itemError } from "../../utils/validators";
 import { duplicateService } from "../../services/duplicateService";
 import DuplicateWarning from "../../components/items/DuplicateWarning.jsx";
+import usePinLocation, { cleanLocation } from "../../hooks/usePinLocation";
 
 const today = new Date().toISOString().slice(0, 10);
 
@@ -24,7 +25,7 @@ export default function ReportLostItemPage() {
     identifyingDetails: "",
     lostDate: today
   });
-  const [location, setLocation] = useState({ city: "" });
+  const { location, geo, handlePin, pinProblem } = usePinLocation();
   const [error, setError] = useState(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -38,6 +39,8 @@ export default function ReportLostItemPage() {
   const handleSubmit = async (e, skipCheck = false) => {
     if (e) e.preventDefault();
     setError(null);
+    const pin = pinProblem();
+    if (pin) { setError(pin); return; }
     const problem = itemError({ ...form, city: location.city });
     if (problem) { setError(problem); return; }
     if (!location.latitude || !location.longitude) { setError("Please pick the approximate location on the map."); return; }
@@ -52,11 +55,11 @@ export default function ReportLostItemPage() {
             latitude: location.latitude, longitude: location.longitude,
             description: form.description, brand: form.brand
           })
-          .catch(() => []);
+          .catch((err) => { console.warn("Duplicate check failed", err); return []; })
         if (hits.length > 0) { setDuplicates(hits); return; }
       }
       setDuplicates(null);
-      const res = await lostItemService.create({ ...form, location });
+      const res = await lostItemService.create({ ...form, location: cleanLocation(location) });
       navigate(`/lost-items/${res.lostItemId}`);
     } catch (err) {
       setError(extractErrorMessage(err));

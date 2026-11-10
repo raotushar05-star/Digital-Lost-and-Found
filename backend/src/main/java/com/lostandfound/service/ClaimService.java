@@ -77,6 +77,12 @@ public class ClaimService {
             if (!lostItem.getOwner().getUserId().equals(claimant.getUserId())) {
                 throw new ForbiddenException("You can only reference your own lost-item reports in a claim");
             }
+            if (lostItem.getStatus() == LostItemStatus.WITHDRAWN
+                    || lostItem.getStatus() == LostItemStatus.RESOLVED
+                    || lostItem.getStatus() == LostItemStatus.RETURNED) {
+                throw new BadRequestException(
+                        "That lost-item report is already closed and cannot be linked to a claim");
+            }
         }
 
         Claim claim = Claim.builder()
@@ -89,6 +95,10 @@ public class ClaimService {
         claim = claimRepository.save(claim);
 
         caseService.findAndTransition(foundItem, CaseStatus.CLAIM_SUBMITTED, claimant, "Ownership claim submitted");
+        if (lostItem.getStatus() == LostItemStatus.WITHDRAWN || lostItem.getStatus() == LostItemStatus.RESOLVED
+                || lostItem.getStatus() == LostItemStatus.RETURNED) {
+            throw new BadRequestException("That lost-item report is already closed and cannot be linked to a claim");
+        }
         if (lostItem != null) {
             lostItem.setStatus(LostItemStatus.CLAIM_SUBMITTED);
             lostItemRepository.save(lostItem);
@@ -121,6 +131,7 @@ public class ClaimService {
         Claim claim = getEntityById(claimId);
         assertCanView(claim, principal);
         ClaimDetailDto dto = claimMapper.toDetailDto(claim);
+        dto.setHandoverRecorded(handoverRecordRepository.findByClaim_ClaimId(claimId).isPresent());
         boolean police = StationAccess.isPoliceStaff(principal) || StationAccess.isSystemAdmin(principal);
         if (police && claim.getLostItem() != null) {
             dto.setLostItemPhotos(photoMapper.toDtoList(claim.getLostItem().getPhotos()));

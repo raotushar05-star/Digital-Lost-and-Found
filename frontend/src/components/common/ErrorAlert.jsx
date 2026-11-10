@@ -1,10 +1,6 @@
 import React from "react";
+import FlashAlert from "./FlashAlert.jsx";
 
 export default function ErrorAlert({ message }) {
-  if (!message) return null;
-  return (
-    <div className="alert alert-danger" role="alert" style={{ borderRadius: "var(--radius-sm)" }}>
-      {message}
-    </div>
-  );
+  return <FlashAlert message={message} variant="danger" />;
 }

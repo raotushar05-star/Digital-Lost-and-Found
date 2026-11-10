@@ -4,13 +4,17 @@ import AppLayout from "../../components/common/AppLayout.jsx";
 import LoadingSpinner from "../../components/common/LoadingSpinner.jsx";
 import StatusStamp from "../../components/common/StatusStamp.jsx";
 import { searchService } from "../../services/searchService";
+import { userService } from "../../services/userService";
 import { useAuth } from "../../context/AuthContext.jsx";
 import { formatDate } from "../../utils/format";
 
+const ACTIVE_CLAIM = ["PENDING", "UNDER_VERIFICATION", "DISPUTED", "APPROVED"];
+
 export default function FoundItemPublicDetailPage() {
   const { id } = useParams();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, role } = useAuth();
   const [item, setItem] = useState(null);
+  const [myClaim, setMyClaim] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -18,24 +22,34 @@ export default function FoundItemPublicDetailPage() {
     searchService
       .getPublicDetail(id)
       .then(setItem)
-      .catch(() => setError("This item is not available for public viewing."))
+      .catch(() => setError("This item is no longer available. It may have been returned to its owner, or it has not been verified yet."))
       .finally(() => setLoading(false));
   }, [id]);
+
+  useEffect(() => {
+    if (role !== "USER") return;
+    userService
+      .getMyClaims()
+      .then((claims) => setMyClaim(claims.find((c) => c.foundItemId === id && ACTIVE_CLAIM.includes(c.status)) || null))
+      .catch(() => {});
+  }, [id, role]);
 
   return (
     <AppLayout>
       {loading ? (
         <LoadingSpinner />
       ) : error ? (
-        <div className="alert alert-warning">{error}</div>
+        <div className="empty-state">
+          <h5 className="font-display mb-2">Item not available</h5>
+          <p className="mb-3">{error}</p>
+          <Link to="/search" className="btn btn-primary btn-sm">Back to search</Link>
+        </div>
       ) : (
         <div className="row g-4">
           <div className="col-lg-7">
             <div className="page-eyebrow mb-1">Found item</div>
             <div className="d-flex align-items-center gap-2 mb-2">
-              <h1 style={{ fontSize: "1.6rem" }} className="mb-0">
-                {item.category}
-              </h1>
+              <h1 style={{ fontSize: "1.6rem" }} className="mb-0">{item.category}</h1>
               <StatusStamp status={item.verificationStatus} />
             </div>
             {item.photos && item.photos.length > 0 ? (
@@ -74,17 +88,23 @@ export default function FoundItemPublicDetailPage() {
               </div>
             </div>
 
-            {isAuthenticated ? (
+            {!isAuthenticated ? (
+              <div className="alert alert-info">
+                <Link to="/login" state={{ from: { pathname: `/found-items/${id}/claim` } }}>Sign in</Link>{" "}
+                to submit an ownership claim for this item.
+              </div>
+            ) : role !== "USER" ? (
+              <div className="text-muted-soft" style={{ fontSize: "0.85rem" }}>
+                Ownership claims are submitted from citizen accounts.
+              </div>
+            ) : myClaim ? (
+              <div className="alert alert-info">
+                You already have a claim on this item. <Link to={`/claims/${myClaim.claimId}`}>View your claim</Link>
+              </div>
+            ) : (
               <Link to={`/found-items/${id}/claim`} className="btn btn-primary">
                 This is mine — submit a claim
               </Link>
-            ) : (
-              <div className="alert alert-info">
-                <Link to="/login" state={{ from: { pathname: `/found-items/${id}/claim` } }}>
-                  Sign in
-                </Link>{" "}
-                to submit an ownership claim for this item.
-              </div>
             )}
           </div>
           <div className="col-lg-5">

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, Link } from "react-router-dom";
 import AppLayout from "../../components/common/AppLayout.jsx";
 import PageHeader from "../../components/common/PageHeader.jsx";
 import ErrorAlert from "../../components/common/ErrorAlert.jsx";
@@ -19,6 +19,7 @@ export default function ClaimSubmissionPage() {
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [loadError, setLoadError] = useState(null);
 
   useEffect(() => {
     Promise.all([searchService.getPublicDetail(foundItemId), userService.getMyLostItems()])
@@ -26,6 +27,7 @@ export default function ClaimSubmissionPage() {
         setItem(itemData);
         setLostItems(myLostItems.filter((li) => li.status !== "RESOLVED" && li.status !== "WITHDRAWN"));
       })
+      .catch(() => setLoadError("This item is no longer available for claims."))
       .finally(() => setLoading(false));
   }, [foundItemId]);
 
@@ -47,7 +49,17 @@ export default function ClaimSubmissionPage() {
   };
 
   if (loading) return <AppLayout><LoadingSpinner /></AppLayout>;
-
+  if (loadError) {
+    return (
+      <AppLayout>
+        <div className="empty-state">
+          <h5 className="font-display mb-2">Can't claim this item</h5>
+          <p className="mb-3">{loadError}</p>
+          <Link to="/search" className="btn btn-primary btn-sm">Back to search</Link>
+        </div>
+      </AppLayout>
+    );
+  }
   return (
     <AppLayout>
       <PageHeader eyebrow="Ownership claim" title={`Claim: ${item?.category}`} />

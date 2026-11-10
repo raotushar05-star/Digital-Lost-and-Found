@@ -8,6 +8,7 @@ import StatusStamp from "../../components/common/StatusStamp.jsx";
 import { feedbackService } from "../../services/feedbackService";
 import { extractErrorMessage } from "../../services/apiClient";
 import { formatDate } from "../../utils/format";
+import SuccessAlert from "../../components/common/SuccessAlert.jsx";
 
 const STATUSES = ["OPEN", "IN_REVIEW", "RESOLVED", "CLOSED"];
 
@@ -19,6 +20,7 @@ export default function FeedbackInboxPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [savingId, setSavingId] = useState(null);
+  const [notice, setNotice] = useState(null);
 
   const load = () => {
     setLoading(true);
@@ -45,8 +47,10 @@ export default function FeedbackInboxPage() {
     const draft = drafts[submission.feedbackId];
     setSavingId(submission.feedbackId);
     setError(null);
+    setNotice(null);
     try {
       await feedbackService.respond(submission.feedbackId, draft);
+      setNotice("Reply saved and sent to the citizen.");
       load();
     } catch (err) {
       setError(extractErrorMessage(err));
@@ -79,12 +83,16 @@ export default function FeedbackInboxPage() {
         }
       />
       {error && <ErrorAlert message={error} />}
+      <SuccessAlert message={notice} />
       {loading ? <LoadingSpinner /> : filtered.length === 0 ? (
         <EmptyState title="Inbox is clear" message="New feedback and complaints from users and police staff will appear here." />
       ) : (
         <div className="d-flex flex-column gap-3">
           {filtered.map((submission) => {
             const draft = drafts[submission.feedbackId] || { status: submission.status, adminResponse: "" };
+            const unchanged = Boolean(submission.adminResponse)
+              && draft.status === submission.status
+              && draft.adminResponse.trim() === submission.adminResponse.trim();
             return (
               <article key={submission.feedbackId} className="card p-3">
                 <div className="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-2">
@@ -110,8 +118,10 @@ export default function FeedbackInboxPage() {
                     <textarea id={`feedback-response-${submission.feedbackId}`} className="form-control" rows={2} value={draft.adminResponse} onChange={(event) => updateDraft(submission.feedbackId, { adminResponse: event.target.value })} />
                   </div>
                   <div className="col-sm-2">
-                    <button className="btn btn-primary w-100" disabled={savingId === submission.feedbackId || !draft.adminResponse.trim()} onClick={() => saveResponse(submission)}>
-                      {savingId === submission.feedbackId ? "Saving…" : "Save reply"}
+                    <button className="btn btn-primary w-100"
+                      disabled={savingId === submission.feedbackId || !draft.adminResponse.trim() || unchanged}
+                      onClick={() => saveResponse(submission)}>
+                      {savingId === submission.feedbackId ? "Saving…" : unchanged ? "Saved ✓" : "Save reply"}
                     </button>
                   </div>
                 </div>

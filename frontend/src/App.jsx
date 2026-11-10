@@ -41,6 +41,7 @@ import ForgotPasswordPage from "./pages/auth/ForgotPasswordPage.jsx";
 import ResetPasswordPage from "./pages/auth/ResetPasswordPage.jsx";
 import AuditLogPage from "./pages/admin/AuditLogPage.jsx";
 import UserManagementPage from "./pages/admin/UserManagementPage.jsx";
+import NotFoundPage from "./pages/NotFoundPage.jsx";
 
 const POLICE_ROLES = ["POLICE_OFFICER", "POLICE_ADMIN"];
 const REPORTS_ROLES = ["POLICE_OFFICER", "POLICE_ADMIN", "SYSTEM_ADMIN"];
@@ -91,7 +92,7 @@ export default function App() {
       <Route path="/admin/audit" element={<ProtectedRoute allowedRoles={["SYSTEM_ADMIN"]}><AuditLogPage /></ProtectedRoute>} />
       <Route path="/admin/feedback" element={<ProtectedRoute allowedRoles={["SYSTEM_ADMIN"]}><FeedbackInboxPage /></ProtectedRoute>} />
 
-      <Route path="*" element={<LandingPage />} />
+      <Route path="*" element={<NotFoundPage />} />
     </Routes>
   );
 }

@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
 import AppLayout from "../../components/common/AppLayout.jsx";
 import PageHeader from "../../components/common/PageHeader.jsx";
 import ErrorAlert from "../../components/common/ErrorAlert.jsx";
@@ -10,14 +9,14 @@ import { extractErrorMessage } from "../../services/apiClient";
 import { duplicateService } from "../../services/duplicateService";
 import DuplicateWarning from "../../components/items/DuplicateWarning.jsx";
 import { itemError } from "../../utils/validators";
+import usePinLocation, { cleanLocation } from "../../hooks/usePinLocation";
 
 const today = new Date().toISOString().slice(0, 10);
 
 export default function ReportFoundItemPage() {
-  const navigate = useNavigate();
   const [categories, setCategories] = useState([]);
   const [form, setForm] = useState({ categoryId: "", description: "", brand: "", color: "", foundDate: today });
-  const [location, setLocation] = useState({ city: "" });
+  const { location, geo, handlePin, pinProblem } = usePinLocation();
   const [photoFile, setPhotoFile] = useState(null);
   const [photoPreview, setPhotoPreview] = useState(null);
   const [error, setError] = useState(null);
@@ -46,9 +45,11 @@ export default function ReportFoundItemPage() {
   const handleSubmit = async (e, skipCheck = false) => {
     if (e) e.preventDefault();
     setError(null);
+    const pin = pinProblem();
+    if (pin) { setError(pin); return; }
+    if (!photoFile) { setError("Please select a photo of the item."); return; }
     const problem = itemError({ ...form, city: location.city });
     if (problem) { setError(problem); return; }
-    if (!photoFile) { setError("Please select a photo of the item."); return; }
     if (!location.latitude || !location.longitude) { setError("Please pick the approximate location on the map."); return; }
     if (!location.city) { setError("Please enter the city for this location."); return; }
     setSubmitting(true);
@@ -61,11 +62,11 @@ export default function ReportFoundItemPage() {
             latitude: location.latitude, longitude: location.longitude,
             description: form.description, brand: form.brand
           })
-          .catch(() => []);
+          .catch((err) => { console.warn("Duplicate check failed", err); return []; })
         if (hits.length > 0) { setDuplicates(hits); return; }
       }
       setDuplicates(null);
-      const res = await foundReportService.create({ ...form, location }, photoFile);
+      const res = await foundReportService.create({ ...form, location: cleanLocation(location) }, photoFile);
       setDone(res);
     } catch (err) {
       setError(extractErrorMessage(err));
@@ -161,14 +162,17 @@ export default function ReportFoundItemPage() {
         </div>
 
         <div className="mb-3">
-          <label className="form-label">City</label>
-          <input
-            className="form-control mb-2"
-            required
-            value={location.city || ""}
-            onChange={(e) => setLocation({ ...location, city: e.target.value })}
-          />
-          <LocationPicker value={location} onChange={setLocation} />
+          <label className="form-label">Click the map to mark the place</label>
+          <LocationPicker value={location} onChange={handlePin} />
+          <div className="mt-2" style={{ fontSize: "0.82rem" }}>
+            {geo.status === "loading" && <span className="text-muted-soft">Looking up the area…</span>}
+            {location.city && geo.status !== "loading" && (
+              <span>
+                <strong>Area:</strong>{" "}
+                {[location.locality, location.city, location.state, location.postalCode].filter(Boolean).join(", ")}
+              </span>
+            )}
+          </div>
         </div>
         {duplicates && (
           <DuplicateWarning hits={duplicates} busy={submitting}

@@ -17,7 +17,7 @@ export default function DashboardPage() {
   const [claims, setClaims] = useState([]);
   const [matches, setMatches] = useState([]);
   const [loading, setLoading] = useState(true);
-  const activeLostItems = lostItems.filter((item) => !["RESOLVED", "RETURNED"].includes(item.status));
+  const activeLostItems = lostItems.filter((item) => !["RESOLVED", "RETURNED", "WITHDRAWN"].includes(item.status));
   const activeFoundReports = foundReports.filter((report) => report.status !== "RETURNED");
 
   useEffect(() => {

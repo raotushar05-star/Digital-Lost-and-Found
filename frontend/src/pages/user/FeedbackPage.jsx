@@ -8,6 +8,7 @@ import StatusStamp from "../../components/common/StatusStamp.jsx";
 import { feedbackService } from "../../services/feedbackService";
 import { extractErrorMessage } from "../../services/apiClient";
 import { formatDate } from "../../utils/format";
+import SuccessAlert from "../../components/common/SuccessAlert.jsx";
 
 const emptyForm = { feedbackType: "FEEDBACK", subject: "", message: "" };
 
@@ -54,7 +55,7 @@ export default function FeedbackPage() {
           <form className="card p-3" onSubmit={handleSubmit}>
             <h2 className="mb-3" style={{ fontSize: "1rem" }}>New message</h2>
             {error && <ErrorAlert message={error} />}
-            {success && <div className="alert alert-success py-2" role="status">{success}</div>}
+            <SuccessAlert message={success} />
             <div className="mb-3">
               <label htmlFor="feedback-type" className="form-label">Type</label>
               <select id="feedback-type" className="form-select" value={form.feedbackType} onChange={(event) => setForm({ ...form, feedbackType: event.target.value })}>

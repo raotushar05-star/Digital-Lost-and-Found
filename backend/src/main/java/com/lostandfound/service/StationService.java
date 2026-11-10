@@ -130,7 +130,7 @@ public class StationService {
                 .stationName(request.getStationName())
                 .stationCode(request.getStationCode())
                 .address(request.getAddress())
-                .phone(request.getPhone())
+                .phone(officerPhone)
                 .location(location)
                 .isActive(true)
                 .build());

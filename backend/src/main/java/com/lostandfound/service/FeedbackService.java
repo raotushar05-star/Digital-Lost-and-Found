@@ -11,6 +11,7 @@ import com.lostandfound.entity.enums.NotificationType;
 import com.lostandfound.exception.ResourceNotFoundException;
 import com.lostandfound.mapper.FeedbackMapper;
 import com.lostandfound.repository.FeedbackSubmissionRepository;
+import com.lostandfound.exception.BadRequestException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -67,15 +68,20 @@ public class FeedbackService {
     public FeedbackDto respond(UUID feedbackId, User admin, FeedbackUpdateRequest request) {
         FeedbackSubmission submission = feedbackRepository.findById(feedbackId)
                 .orElseThrow(() -> new ResourceNotFoundException("Feedback submission not found: " + feedbackId));
+        String reply = request.getAdminResponse().trim();
+        if (submission.getStatus() == request.getStatus() && reply.equals(submission.getAdminResponse())) {
+            throw new BadRequestException("Nothing has changed since your last reply, so nothing was sent");
+        }
         submission.setStatus(request.getStatus());
-        submission.setAdminResponse(request.getAdminResponse().trim());
+        submission.setAdminResponse(reply);
         submission.setRespondedBy(admin);
         submission = feedbackRepository.save(submission);
 
         auditService.log(admin, "FEEDBACK_RESPONDED", "FeedbackSubmission", submission.getFeedbackId());
         notificationService.notify(submission.getUser(), NotificationType.GENERAL,
                 submission.getFeedbackType() == FeedbackType.COMPLAINT
-                        ? "Update on your complaint" : "Response to your feedback",
+                        ? "Update on your complaint"
+                        : "Response to your feedback",
                 "Status: " + submission.getStatus().name().replace('_', ' ') + ". " + submission.getAdminResponse(),
                 null, null);
         return feedbackMapper.toDto(submission);

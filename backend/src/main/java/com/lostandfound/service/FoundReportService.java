@@ -93,17 +93,21 @@ public class FoundReportService {
                 itemPhotoRepository.save(itemPhoto);
 
                 PoliceStation assigned = report.getAssignedStation();
-                String where = assigned != null
-                                ? assigned.getStationName() + " (" + assigned.getAddress() + ")"
-                                : "your nearest police station";
-                notificationService.notify(
-                                finder,
-                                NotificationType.GENERAL,
-                                "Found item report received",
-                                "Your found-item report was submitted successfully. Please take the item to " + where
-                                                + " so an officer can register and verify it. Until then it will not appear in public search.",
-                                null,
-                                null);
+                String message;
+                if (assigned != null) {
+                        String phone = assigned.getPhone() != null && !assigned.getPhone().isBlank()
+                                        ? ", phone " + assigned.getPhone()
+                                        : "";
+                        message = "Your found-item report was submitted successfully. Please take the item to "
+                                        + assigned.getStationName() + ", " + assigned.getAddress() + phone
+                                        + ", so an officer can register and verify it. Until then it will not appear in public search.";
+                } else {
+                        message = "Your found-item report was submitted successfully, but no registered police station is near the "
+                                        + "place you marked. Please take the item to your nearest police station. The system "
+                                        + "administrator can see unassigned reports and add a station for your area.";
+                }
+                notificationService.notify(finder, NotificationType.GENERAL, "Found item report received", message,
+                                null, null);
 
                 auditService.log(finder, "FOUND_REPORT_SUBMITTED", "FoundReport", report.getFoundReportId());
 

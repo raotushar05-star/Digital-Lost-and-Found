@@ -3,6 +3,7 @@ import ErrorAlert from "./ErrorAlert.jsx";
 import PasswordInput from "./PasswordInput.jsx";
 import { authService } from "../../services/authService";
 import { extractErrorMessage } from "../../services/apiClient";
+import SuccessAlert from "./SuccessAlert.jsx";
 
 const PASSWORD_RE = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,64}$/;
 
@@ -43,7 +44,7 @@ export default function ChangePasswordCard() {
     <form onSubmit={handleSubmit} className="card p-4 mt-4" style={{ maxWidth: 560 }} autoComplete="off">
       <h2 style={{ fontSize: "1.05rem" }} className="mb-3">Change password</h2>
       <ErrorAlert message={error} />
-      {success && <div className="alert alert-success">Password changed.</div>}
+      <SuccessAlert message={success ? "Password changed." : null} />
       <div className="mb-3">
         <label className="form-label">Current password</label>
         <PasswordInput autoComplete="current-password" value={current} onChange={(e) => setCurrent(e.target.value)} />

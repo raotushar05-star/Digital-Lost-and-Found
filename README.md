@@ -1,163 +1,168 @@
-# Digital Lost & Found Network
+# FindLine: Digital Lost & Found Network
 
-A full-stack civic service connecting citizens and police stations for lost-and-found
-property: citizen reporting, police custody intake and verification, smart matching,
-ownership claims with evidence, fraud-prevention disputes, and a documented handover —
-built from the frozen project specification (`01`–`08` spec documents).
+A police-assisted lost-and-found platform. Citizens report lost and found property, police stations take items
+into verified custody, and owners claim items with evidence. Every step is recorded, and an officer decides
+ownership. Built with a React frontend and a Spring Boot REST API.
 
-```
-project/
-├── backend/    Spring Boot 3 / Java 17+ REST API
-├── frontend/   React 18 + Vite single-page app
-└── docker-compose.yml   Local PostgreSQL for development
-```
+> **Status:** academic prototype. It runs locally. It has not been deployed or security-audited.
 
-## Architecture
+**Demo video:** _add your unlisted YouTube link here_
 
-- **Backend:** Spring Boot 3.3, Spring Security (JWT, stateless), Spring Data JPA,
-  PostgreSQL, Flyway migrations, Lombok. Package layout: `entity` → `repository` →
-  `service` (business rules) → `controller` (REST endpoints), plus `dto`, `mapper`,
-  `security`, `exception`, `config`, `util`.
-- **Database:** 18 tables exactly as specified in `03_Database_Specification.docx`
-  (`backend/src/main/resources/db/migration/V1__init_schema.sql`), with a small
-  reference-data seed (`V2__seed_reference_data.sql`) for categories and a demo
-  police station.
-- **Frontend:** React Router, Axios (JWT bearer interceptor), React-Leaflet +
-  OpenStreetMap tiles for the map/location module, Bootstrap 5 as the base
-  framework with a custom "civic ledger" design layer on top (see
-  `frontend/src/index.css`).
+| Citizen dashboard | Police claim review | Station management |
+|---|---|---|
+| ![Citizen dashboard](docs/screenshots/citizen-dashboard.png) | ![Claim review](docs/screenshots/claim-review.png) | ![Stations](docs/screenshots/stations.png) |
+
+## Why police-assisted?
+
+On a notice board or social media, anyone can claim an item and nobody checks. FindLine puts a verification step
+in the middle:
+
+1. A finder reports the item, then hands it to a police station.
+2. An officer registers and verifies it. Only then does it appear in public search.
+3. The owner submits a claim with evidence. An officer approves, rejects, or raises a dispute.
+4. The owner collects the item with a one-time code, and a receipt is recorded.
+
+## Features
+
+**Citizens**
+- Report lost items and found items, with a map pin. The area is looked up from the pin (OpenStreetMap).
+- Duplicate-report warning for your own near-identical reports.
+- Search verified items still in police custody (category, city, colour, brand, keywords).
+- Automatic match suggestions (category, date, distance, colour, brand, description overlap).
+- Submit ownership claims with evidence files. Evidence is private to you and the item's station.
+- Handover: generate a one-time code, collect the item, download the receipt PDF.
+- In-app notifications, feedback and complaints, case tracking, case PDF download.
+
+**Police officers**
+- Station-scoped lost-report queue, found-item intake and verification, photo upload.
+- Claim review: approve, reject, or raise a dispute when claims compete.
+- Handover with one-time code check, case diary, case-file PDFs (single and bulk).
+- Transfer an item to another station with a logged reason.
+- Retention tracking (days in custody, overdue filter) and disposal after the retention period.
+
+**System administrator**
+- Create police stations with a map pin and a station officer login.
+- Manage users (activate, deactivate, unlock), view the audit log, manage item categories.
+- Read and reply to feedback and complaints. Cross-station reports.
+- Reports that are farther than 30 km from every station stay unassigned. The admin sees how many,
+  and they are assigned automatically when a station is created nearby.
+
+**Security**
+- JWT authentication, role checks on every endpoint, and a station check so officers only touch their own station's records.
+- BCrypt password hashes, login lockout (5 failures, 15 minutes), forgot and change password with single-use expiring tokens.
+- Idle sign-out (10 minutes for staff, 30 for citizens).
+- Protected evidence and lost-report files, and an audit log of sensitive actions.
+- Optional: Google email verification at sign-up, SMS/WhatsApp alerts through Twilio. Both are off by default.
 
 ## Roles
 
-The system has four roles (frozen in the schema's `users.role` check constraint):
-
-| Role | Can do |
-|---|---|
-| `USER` | Report lost items, submit finder reports, browse/search, submit claims + evidence |
-| `POLICE_OFFICER` | Intake & verify found items, review claims, verify ownership, raise disputes, record handovers |
-| `POLICE_ADMIN` | Everything an officer can, plus station-level reports |
-| `SYSTEM_ADMIN` | Manage police stations and item categories, view cross-station reports |
-
-**Note:** the API contract only defines a public `/auth/register` endpoint, which always
-creates a `USER` account. It does not define an endpoint for provisioning police or
-admin accounts — those are institutional accounts, not self-service signups. This
-build seeds one of each (see below) so you can log in and exercise every role
-immediately; if you need real account provisioning, you'll want to add an
-admin-only user-management endpoint (deliberately not invented here, since it isn't
-in the frozen contract).
-
-## Prerequisites
-
-- Java 17+, Maven 3.9+ (or use your IDE's bundled Maven)
-- Node.js 18+ and npm
-- PostgreSQL 14+ (or Docker, for the provided `docker-compose.yml`)
-
-## Running it locally
-
-### 1. Start PostgreSQL
-
-```bash
-cd project
-docker compose up -d
-```
-
-This starts Postgres on `localhost:5432` with database `lostandfound` / user
-`postgres` / password `postgres`. (No Docker? Point the backend at any Postgres 14+
-instance instead — see environment variables below.)
-
-### 2. Run the backend
-
-```bash
-cd project/backend
-mvn spring-boot:run
-```
-
-On first boot, Flyway creates the schema and seed data, and a `DataSeeder`
-component creates these accounts if they don't already exist:
-
-| Role | Email | Password |
+| Role | Created by | Can do |
 |---|---|---|
-| System Admin | `admin@lostandfound.local` | `Admin@12345` |
-| Police Admin (demo station) | `station.admin@lostandfound.local` | `Police@12345` |
-| Police Officer (demo station) | `officer@lostandfound.local` | `Police@12345` |
+| `USER` (citizen) | Self-registration | Report, search, claim, track |
+| `POLICE_OFFICER` | System admin (when creating a station) | Everything station-scoped listed above |
+| `POLICE_ADMIN` | Demo seed only | Same as an officer, plus the station-wise report table. Not created from the UI |
+| `SYSTEM_ADMIN` | Seeded | Stations, users, categories, audit log, feedback, reports |
 
-The API is served at `http://localhost:8080/api/v1`.
+## Tech stack
 
-### 3. Run the frontend
+| Layer | Technology |
+|---|---|
+| Backend | Java 17+, Spring Boot 3.3, Spring Security (JWT), Spring Data JPA, Flyway, Lombok, OpenPDF |
+| Database | PostgreSQL 16 (Docker) |
+| Frontend | React 18, Vite, React Router, Axios, Bootstrap 5, React-Leaflet |
+| Tests | JUnit 5 + Mockito (backend), a small Node test runner (frontend) |
+
+```
+project/
+├── backend/            Spring Boot API (controller → service → repository, plus dto, mapper, security)
+├── frontend/           React single-page app
+└── docker-compose.yml  Local PostgreSQL
+```
+
+## Run it locally
+
+**Prerequisites:** Java 17 or newer, Maven 3.9+, Node 18+, Docker Desktop.
 
 ```bash
-cd project/frontend
+# 1. Database
+docker compose up -d
+
+# 2. Backend (http://localhost:8080)
+cd backend
+mvn clean spring-boot:run
+
+# 3. Frontend (http://localhost:5173), in a second terminal
+cd frontend
 npm install
 npm run dev
 ```
 
-Visit `http://localhost:5173`. The dev server proxies `/api` to the backend
-(see `vite.config.js`), and `VITE_API_BASE_URL` can be set in a `.env` file
-(see `.env.example`) if you deploy the two apart.
+Flyway creates the schema and a small demo data set on first start.
 
-## Environment variables (backend)
+### Demo accounts (development only)
+
+| Role | Email | Password |
+|---|---|---|
+| System admin | `admin@lostandfound.local` | `Admin@12345` |
+| Station admin (Barke) | `station.admin@lostandfound.local` | `Police@12345` |
+| Officer (Barke) | `officer@lostandfound.local` | `Police@12345` |
+| Officer (Cubbon Park) | `cubbon.officer@lostandfound.local` | `Police@12345` |
+
+These are seeded for local demos only. Never reuse them anywhere real.
+
+### Configuration
+
+All settings have local defaults. Override them with environment variables.
 
 | Variable | Default | Purpose |
 |---|---|---|
-| `DB_URL` | `jdbc:postgresql://localhost:5432/lostandfound` | JDBC connection string |
-| `DB_USERNAME` / `DB_PASSWORD` | `postgres` / `postgres` | DB credentials |
-| `JWT_SECRET` | dev-only placeholder | **Change in production.** HS256 signing key |
-| `JWT_EXPIRATION_MS` | `3600000` (1 hour) | Access token lifetime |
-| `CORS_ALLOWED_ORIGINS` | `http://localhost:5173,http://localhost:3000` | Comma-separated allowed origins |
-| `UPLOAD_DIR` | `./uploads` | Local disk path for uploaded photos/evidence files |
-| `UPLOAD_BASE_URL` | `/api/v1/files` | Public URL prefix under which uploads are served |
-| `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PHONE` / `SEED_ADMIN_PASSWORD` | see above | Override the seeded SYSTEM_ADMIN credentials |
+| `DB_URL`, `DB_USERNAME`, `DB_PASSWORD` | local Postgres | Database |
+| `JWT_SECRET` | dev placeholder | **Change outside local use** |
+| `JWT_EXPIRATION_MS` | `3600000` | Token lifetime |
+| `CORS_ALLOWED_ORIGINS` | `http://localhost:5173,http://localhost:3000` | Allowed browser origins |
+| `UPLOAD_DIR`, `UPLOAD_BASE_URL` | `./uploads`, `/api/v1/files` | File storage |
+| `ROUTING_MAX_DISTANCE_KM` | `30` | Reports farther than this stay unassigned |
+| `RETENTION_DAYS` | `90` | Days in custody before an item is overdue |
+| `FRONTEND_URL` | `http://localhost:5173` | Used in password-reset links |
+| `MAIL_ENABLED` and `MAIL_*` | off | Email. When off, reset links are printed in the backend log |
+| `GOOGLE_CLIENT_ID` (backend) and `VITE_GOOGLE_CLIENT_ID` (frontend) | unset | Google email check. Set both or neither |
+| `SMS_ENABLED`, `SMS_CHANNEL`, `TWILIO_*` | off | SMS or WhatsApp alerts |
 
-## Design notes & judgment calls
+PowerShell example: `$env:GOOGLE_CLIENT_ID="your-id"; mvn clean spring-boot:run`.
 
-The functional spec (modules, schema, API contract, dev rules) is implemented as
-frozen. A few implementation details weren't pinned down by the spec and required
-a reasonable, documented choice:
+### Tests
 
-- **Matching** runs automatically (a new lost item is matched against verified
-  found items, and vice versa on verification) *and* is exposed as an explicit
-  `POST /matches/generate` endpoint for police/admin to re-run in bulk. Scoring
-  combines category (required), date proximity, geographic distance (haversine,
-  computed in-app — no PostGIS dependency), color/brand equality, and description
-  keyword overlap, with a configurable minimum threshold (`app.matching.minimum-score`).
-- **Case status** follows the progression named in the UI spec's status system
-  and the dev-rules workflow diagram (`REPORTED → RECEIVED → POLICE_VERIFIED →
-  POTENTIAL_MATCH → CLAIM_SUBMITTED → UNDER_VERIFICATION → APPROVED/REJECTED →
-  RETURNED → RESOLVED`), tracked per-case in `case_status_history`.
-- **Competing claims:** approving one claim on a found item automatically
-  closes out any other pending/under-review claims on the same item, per the
-  frozen fraud-prevention rule that a found item can carry multiple claims.
-- **Search geo-filtering** (`/found-items`, `/found-items/nearby`) is computed
-  in-application rather than via a spatial database extension, which keeps the
-  stack to exactly what `06_Tech_Stack_and_Architecture.docx` specifies.
-- Role-gating on "Police."-only endpoints (per the API contract's own wording)
-  excludes `SYSTEM_ADMIN`; endpoints explicitly marked "Police/Admin" or
-  "POLICE_ADMIN, SYSTEM_ADMIN" include it. This distinction is preserved
-  consistently in both the backend `@PreAuthorize` rules and the frontend route
-  guards.
+```bash
+cd backend && mvn test
+cd frontend && node test/testRunner.js
+```
 
-## Troubleshooting
+### Troubleshooting
+- **Connection to localhost:5432 refused:** start Docker Desktop, then `docker compose up -d`.
+- **Odd `ClassFormatError` or "Unresolved compilation problems":** the editor and Maven both wrote to `backend/target`. Close the editor, delete `target`, and run `mvn clean spring-boot:run`.
+- **Red Lombok errors in VS Code but Maven builds fine:** the editor's Java tooling is out of date. Trust the Maven build.
 
-- **`Could not transfer artifact ... No such host is known (repo.maven.apache.org)`**
-  — Maven can't reach the internet. This is a network/DNS problem on your
-  machine, not a project issue: confirm general internet access works, check
-  whether a school/office network is blocking Maven Central (try a phone
-  hotspot to isolate this), and check for a required corporate proxy
-  (Maven needs its own proxy config in `~/.m2/settings.xml` even if your
-  browser works fine).
-- **`error: release version 21 not supported`** — your installed JDK is older
-  than the compiler's target release. Run `java -version` to check. This
-  project targets Java 17 (Spring Boot 3.3's minimum), so any JDK 17 or newer
-  works; if you have something older, install a JDK 17+ (Eclipse Temurin is a
-  good free option) and make sure `JAVA_HOME`/your IDE points at it.
+## Main API areas
+
+All under `/api/v1`: `auth`, `found-items` (public search), `lost-items`, `found-reports`, `claims`,
+`matches`, `cases`, `notifications`, `feedback`, `police/*` (staff), `admin/*` (system admin).
 
 ## Known limitations
 
-- No CI/CD, containerized deployment for the backend/frontend themselves (only
-  the database has a compose file), or production-grade secrets management —
-  add these before any real deployment.
-- File uploads are stored on local disk (`UPLOAD_DIR`), suitable for development;
-  swap in object storage (S3-compatible) for production.
-- It has been reviewed with static consistency checks (DTO field names, enum values, import
-  resolution) but you should run `mvn compile` and `npm run build` locally as a
-  first step.
+- The login token is kept in `localStorage`, and idle sign-out is a browser-side check.
+- Lost-report and found-report photos are reachable by anyone with the link. Claim evidence is protected.
+- Matching is rule-based and compares typed fields only. It does not look at photos, and its accuracy has not been measured.
+- Station routing uses straight-line distance, not road distance or jurisdiction boundaries.
+- Place checks (map lookup) run in the browser. The server validates formats only.
+- The system admin sets each officer's first password.
+- Search and reports filter in memory, which is fine for one city but not a whole state. Uploads sit on local disk.
+- The test suite is small and has no end-to-end tests.
+
+## Future work
+
+Forced password change at first login, a district-level supervisor role, signed short-lived file links,
+refresh tokens, a public case tracker, database-level paging and spatial queries, and end-to-end tests.
+
+## License
+
+MIT, see `LICENSE`.

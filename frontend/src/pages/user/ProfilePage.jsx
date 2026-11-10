@@ -7,6 +7,7 @@ import { userService } from "../../services/userService";
 import { extractErrorMessage } from "../../services/apiClient";
 import { useAuth } from "../../context/AuthContext.jsx";
 import ChangePasswordCard from "../../components/common/ChangePasswordCard.jsx";
+import SuccessAlert from "../../components/common/SuccessAlert.jsx";
 
 export default function ProfilePage() {
   const { refreshProfile } = useAuth();
@@ -73,7 +74,7 @@ export default function ProfilePage() {
       <PageHeader eyebrow="Account" title="Your profile" />
       <form onSubmit={handleSubmit} className="card p-4" style={{ maxWidth: 560 }}>
         <ErrorAlert message={error} />
-        {saved && <div className="alert alert-success">Profile updated.</div>}
+        <SuccessAlert message={saved ? "Profile updated." : null} />
 
         <div className="mb-3">
           <label className="form-label">Role</label>

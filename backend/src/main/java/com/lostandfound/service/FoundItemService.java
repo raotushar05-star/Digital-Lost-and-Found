@@ -13,6 +13,7 @@ import com.lostandfound.mapper.FoundItemMapper;
 import com.lostandfound.repository.*;
 import com.lostandfound.security.UserPrincipal;
 import com.lostandfound.util.FileStorageService;
+
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -44,11 +45,13 @@ public class FoundItemService {
     private final FileStorageService fileStorageService;
     private final AuditService auditService;
     private final FoundItemMapper foundItemMapper;
+    private final NotificationService notificationService;
 
     @Transactional
     public FoundItemIntakeResponse intake(User officer, FoundItemIntakeRequest request) {
         PoliceStation station = stationRepository.findById(request.getStationId())
-                .orElseThrow(() -> new ResourceNotFoundException("Police station not found: " + request.getStationId()));
+                .orElseThrow(
+                        () -> new ResourceNotFoundException("Police station not found: " + request.getStationId()));
         if (officer.getStation() == null || !officer.getStation().getStationId().equals(station.getStationId())) {
             throw new ForbiddenException("You can only intake items at your assigned police station");
         }
@@ -59,7 +62,8 @@ public class FoundItemService {
         FoundReport linkedReport = null;
         if (request.getFoundReportId() != null) {
             linkedReport = foundReportRepository.findById(request.getFoundReportId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Found report not found: " + request.getFoundReportId()));
+                    .orElseThrow(() -> new ResourceNotFoundException(
+                            "Found report not found: " + request.getFoundReportId()));
             if (foundItemRepository.findByFoundReport_FoundReportId(linkedReport.getFoundReportId()).isPresent()) {
                 throw new BadRequestException("This found report has already been linked to an official found item");
             }
@@ -91,7 +95,8 @@ public class FoundItemService {
             linkedReport.setStatus(FoundReportStatus.LINKED);
             foundReportRepository.save(linkedReport);
 
-            List<ItemPhoto> reportPhotos = itemPhotoRepository.findByFoundReport_FoundReportId(linkedReport.getFoundReportId());
+            List<ItemPhoto> reportPhotos = itemPhotoRepository
+                    .findByFoundReport_FoundReportId(linkedReport.getFoundReportId());
             for (ItemPhoto reportPhoto : reportPhotos) {
                 ItemPhoto carriedOver = ItemPhoto.builder()
                         .foundItem(foundItem)
@@ -106,7 +111,14 @@ public class FoundItemService {
 
         Case createdCase = caseService.createForFoundItem(foundItem, officer);
         auditService.log(officer, "FOUND_ITEM_REGISTERED", "FoundItem", foundItem.getFoundItemId());
-
+        if (linkedReport != null) {
+            notificationService.notify(linkedReport.getFinder(), NotificationType.GENERAL,
+                    "Police registered your found item",
+                    "Thank you. " + station.getStationName() + " has registered the item you handed in. "
+                            + "An officer will verify it next. You don't need to do anything else; "
+                            + "you'll be told if its owner claims it.",
+                    null, null);
+        }
         return FoundItemIntakeResponse.builder()
                 .foundItemId(foundItem.getFoundItemId())
                 .status(createdCase.getCurrentStatus().name())
@@ -118,7 +130,8 @@ public class FoundItemService {
     public VerificationResponse verify(UUID foundItemId, User officer, VerifyFoundItemRequest request) {
         FoundItem foundItem = getEntityById(foundItemId);
         if (foundItem.getVerificationStatus() != FoundItemVerificationStatus.PENDING) {
-            throw new BadRequestException("This found item has already been reviewed (" + foundItem.getVerificationStatus() + ")");
+            throw new BadRequestException(
+                    "This found item has already been reviewed (" + foundItem.getVerificationStatus() + ")");
         }
         VerificationDecision decision;
         try {
@@ -140,13 +153,21 @@ public class FoundItemService {
             foundItem.setVerificationStatus(FoundItemVerificationStatus.VERIFIED);
             foundItemRepository.save(foundItem);
             caseService.findAndTransition(foundItem, CaseStatus.POLICE_VERIFIED, officer,
-                    "Found item verified by police: " + (request.getVerificationNotes() != null ? request.getVerificationNotes() : ""));
+                    "Found item verified by police: "
+                            + (request.getVerificationNotes() != null ? request.getVerificationNotes() : ""));
             matchingService.generateForFoundItem(foundItem);
+            if (foundItem.getFoundReport() != null) {
+                notificationService.notify(foundItem.getFoundReport().getFinder(), NotificationType.GENERAL,
+                        "Your found item is verified",
+                        "Police have verified the item you found. It is now listed for its owner to claim.",
+                        null, null);
+            }
         } else {
             foundItem.setVerificationStatus(FoundItemVerificationStatus.REJECTED);
             foundItemRepository.save(foundItem);
             caseService.findAndTransition(foundItem, CaseStatus.REJECTED, officer,
-                    "Found item verification rejected: " + (request.getVerificationNotes() != null ? request.getVerificationNotes() : ""));
+                    "Found item verification rejected: "
+                            + (request.getVerificationNotes() != null ? request.getVerificationNotes() : ""));
         }
         auditService.log(officer, "FOUND_ITEM_VERIFICATION_DECISION", "FoundItem", foundItem.getFoundItemId());
 
@@ -169,7 +190,8 @@ public class FoundItemService {
     @Transactional(readOnly = true)
     public FoundItemPublicDto getPublicDetail(UUID foundItemId) {
         FoundItem item = getEntityById(foundItemId);
-        if (item.getVerificationStatus() != FoundItemVerificationStatus.VERIFIED) {
+        if (item.getVerificationStatus() != FoundItemVerificationStatus.VERIFIED
+                || item.getCustodyStatus() != CustodyStatus.IN_CUSTODY) {
             throw new ResourceNotFoundException("Found item not found: " + foundItemId);
         }
         return foundItemMapper.toPublicDto(item);
@@ -182,7 +204,8 @@ public class FoundItemService {
             throw new ForbiddenException("Officers may only view their own station's inventory");
         }
         return foundItemRepository.findByStation_StationIdOrderByCreatedAtDesc(stationId).stream()
-                .map(item -> foundItemMapper.toAdminDto(item, caseRepository.findByFoundItem_FoundItemId(item.getFoundItemId()).orElse(null)))
+                .map(item -> foundItemMapper.toAdminDto(item,
+                        caseRepository.findByFoundItem_FoundItemId(item.getFoundItemId()).orElse(null)))
                 .collect(Collectors.toList());
     }
 
@@ -218,7 +241,8 @@ public class FoundItemService {
     }
 
     private void assertPolice(UserPrincipal principal) {
-        boolean isPolice = "POLICE_OFFICER".equals(principal.getRole()) || "POLICE_ADMIN".equals(principal.getRole()) || "SYSTEM_ADMIN".equals(principal.getRole());
+        boolean isPolice = "POLICE_OFFICER".equals(principal.getRole()) || "POLICE_ADMIN".equals(principal.getRole())
+                || "SYSTEM_ADMIN".equals(principal.getRole());
         if (!isPolice) {
             throw new ForbiddenException("This action is restricted to police personnel");
         }
